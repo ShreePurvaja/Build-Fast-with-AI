@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+:root {
+  /* Claude Light Theme Palette */
+  --bg-main: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F4F1EA;
+  --bg-hover: #ECE7DE;
+  
+  --border-color: #E6E1D7;
+  --border-strong: #D6CFBF;
+  
+  --text-main: #2B2826;
+  --text-muted: #6E685E;
+  --text-light: #9B9488;
+  
+  --claude-orange: #D97757;
+  --claude-orange-hover: #C15C3D;
+  --claude-orange-light: #FDF3E9;
+  
+  --status-success: #0F766E;
+  --status-success-bg: #E6F4F1;
+  --status-error: #C93B2B;
+  --status-error-bg: #FCEAE8;
+  --status-warning: #D97706;
+  --status-warning-bg: #FEF3C7;
+  
+  --cat-ai: #D97757;
+  --cat-db: #10B981;
+  --cat-trigger: #3B82F6;
+  --cat-tool: #8B5CF6;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  color-scheme: light;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D6CFBF;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C5BCAB;
+}
+
+/* Claude Light UI Utilities */
+.btn-claude-primary {
+  background-color: var(--claude-orange);
+  color: #ffffff;
+  border: 1px solid var(--claude-orange);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(217, 119, 87, 0.2);
+}
+
+.btn-claude-primary:hover {
+  background-color: var(--claude-orange-hover);
+  border-color: var(--claude-orange-hover);
+  box-shadow: 0 4px 10px rgba(217, 119, 87, 0.3);
+}
+
+.btn-claude-secondary {
+  background-color: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.btn-claude-secondary:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+.card-claude {
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(43, 40, 38, 0.04);
+  transition: all 0.2s ease;
+}
+
+.card-claude:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 12px rgba(43, 40, 38, 0.07);
+}
+
+.badge-success {
+  background-color: var(--status-success-bg);
+  color: var(--status-success);
+  border: 1px solid #99F6E4;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.badge-error {
+  background-color: var(--status-error-bg);
+  color: var(--status-error);
+  border: 1px solid #FCA5A5;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.badge-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid #FDE68A;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+}

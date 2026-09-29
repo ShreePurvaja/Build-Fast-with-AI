@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Workforce Platform: Complete Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fbfcfe;--panel:#f1f5f9;--ink:#15233b;--mute:#5a6779;--line:#d9e1ea;--teal:#0e6b6b;--teal-bg:#e3f2f1;--gold:#b7791f;--gold-bg:#fbf1dc}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.65 Newsreader,Georgia,serif}
+h1,h2,h3,.nav,th{font-family:"Bricolage Grotesque",system-ui,sans-serif}
+.wrap{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1120px;margin:0 auto;gap:48px;padding:0 24px}
+.nav{position:sticky;top:0;align-self:start;padding:32px 0;font-size:15px}
+.nav b{display:block;margin-bottom:12px}
+.nav a{display:block;color:var(--mute);text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid var(--line)}
+.nav a:hover,.nav a:focus-visible{color:var(--teal);border-color:var(--teal);outline:none}
+.nav .later{margin-top:18px;color:var(--mute);font-size:13px;line-height:1.5}
+main{padding:40px 0 80px;max-width:820px}
+h1{font-size:clamp(34px,5vw,54px);line-height:1.08;margin:0 0 16px;letter-spacing:-.02em}
+h2{font-size:28px;margin:64px 0 12px;padding-top:24px;border-top:1px solid var(--line)}
+h3{font-size:20px;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{font-size:21px;color:var(--mute);max-width:640px}
+.tree{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;margin:28px 0;font:500 15px/1.4 "Bricolage Grotesque",sans-serif;overflow-x:auto}
+.tree .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0}
+.tree .n{background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 12px}
+.tree .m{background:var(--teal);color:#fff;border-color:var(--teal)}
+.tree .w{border-color:var(--teal);color:var(--teal)}
+.tree .t{color:var(--mute);border-style:dashed}
+.tree .ar{text-align:center;color:var(--mute);line-height:1}
+.assume{background:var(--gold-bg);border-left:4px solid var(--gold);padding:14px 18px;border-radius:0 8px 8px 0;font-size:16px;margin:24px 0}
+.assume ul{margin:6px 0 0;padding-left:20px}
+.tbl{overflow-x:auto;margin:16px 0 24px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px;line-height:1.5}
+th{background:var(--panel);text-align:left;font-size:14px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;font-family:"Bricolage Grotesque",sans-serif;white-space:nowrap}
+.v{background:var(--gold-bg);color:var(--gold);font:600 12px "Bricolage Grotesque",sans-serif;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.est{background:var(--teal-bg);color:var(--teal);font:600 12px "Bricolage Grotesque",sans-serif;padding:1px 6px;border-radius:4px}
+.story{border-left:3px solid var(--teal);padding-left:18px;margin:16px 0}
+.story p{margin-bottom:10px}
+.say{font-style:italic;color:var(--teal)}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.diff div{background:var(--panel);border-radius:8px;padding:14px 16px;font-size:16px;line-height:1.55}
+.diff b{font-family:"Bricolage Grotesque",sans-serif;display:block;margin-bottom:4px}
+.next{margin-top:64px;background:var(--teal-bg);border-radius:10px;padding:18px 22px;font-size:16px}
+@media(max-width:820px){.wrap{grid-template-columns:1fr;gap:0}.nav{position:static;padding:16px 0 0}.nav a{display:inline-block;border:0;padding:4px 10px 4px 0}.diff{grid-template-columns:1fr}body{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav" aria-label="Sections">
+<b>Contents</b>
+<a href="#a1">A1 What it is</a>
+<a href="#a2">A2 End users</a>
+<a href="#a3">A3 Benefits</a>
+<a href="#a4">A4 What exists today</a>
+<a href="#a5">A5 Our advantage</a>
+<a href="#a6">A6 Delivery to customers</a>
+<a href="#b">B Architecture</a><a href="#c">C Tech stack</a><a href="#d">D Security</a><a href="#e">E Build plan</a>
+</nav>
+<main>
+<h1>AI Workforce Platform</h1>
+<p class="lede">Describe a business need in your own language. Get a coordinated team of AI workers that can talk, act in your systems, and hand off to humans.</p>
+
+<div class="tree" aria-label="Workforce hierarchy">
+<div class="row"><span class="n">Organization</span></div><div class="ar">↓</div>
+<div class="row"><span class="n">Workforce: Customer Support</span></div><div class="ar">↓</div>
+<div class="row"><span class="n m">AI Support Manager</span></div><div class="ar">↓</div>
+<div class="row"><span class="n w">Query</span><span class="n w">Order Verification</span><span class="n w">Refund</span><span class="n w">Complaint Resolution</span><span class="n w">Escalation</span></div><div class="ar">↓</div>
+<div class="row"><span class="n t">Order DB</span><span class="n t">CRM</span><span class="n t">Payment API</span><span class="n t">Helpdesk</span></div>
+</div>
+
+<div class="assume"><b>Assumptions (stated instead of asking)</b>
+<ul>
+<li>First target is Indian SMEs and mid-size firms, starting with customer support and order-related workflows.</li>
+<li>The MVP is a hackathon build by 2 to 4 developers over about 8 weeks, then a path to production.</li>
+<li>Every price, free-tier limit, model name and competitor detail here is unverified. Items marked <span class="v">VERIFY</span> must be checked before use.</li>
+<li>Percentages and time savings are labelled <span class="est">estimate</span> and are planning guesses, not measured results.</li>
+</ul></div>
+
+<h2 id="a1">A1. What the project is about</h2>
+<p>Most AI assistants are one general-purpose helper. Real businesses do not work that way. A support desk has people who answer questions, people who check orders, people who approve refunds, and a manager who decides who does what.</p>
+<p>This platform builds that structure with AI. A business owner says, in text or by voice, "I need to handle customer complaints and refunds." The platform designs a team: a manager and several specialist workers, each with its own instructions, knowledge, tools and permissions. Customers then talk to the team by voice in their own language, including Tamil, Hindi, Telugu and mixed speech like Hinglish. The workers do real things, such as look up an order or start a refund, and pass hard cases to a human with the full story attached. A dashboard shows everything that happened.</p>
+<p><b>The problem:</b> voice bots that only chat cannot finish work, and English-only tools miss most Indian customers. <b>The idea in one sentence:</b> turn a plain-language business need into a managed team of AI workers that speaks Indian languages and completes tasks.</p>
+
+<h3>Walkthrough: a Tamil-speaking customer</h3>
+<div class="story">
+<p><b>Setup.</b> Meena runs an online saree store. She types: "Answer customer calls about orders, check delivery, refund if damaged." The platform proposes a Support Workforce: a Manager plus Query, Order Verification and Refund workers, connected to her order sheet and payment gateway. She adjusts the refund limit, runs three simulated calls, and publishes a phone-friendly voice link.</p>
+<p><b>The call.</b> Later, a customer named Kavitha opens the link and says in Tamil that her saree arrived torn. <span class="say">The Manager detects Tamil and replies in Tamil.</span> It routes to the Order Verification Worker, which asks for the order number and looks it up. Kavitha uploads a photo of the damage while still talking. The worker checks the image against the return policy in the knowledge base.</p>
+<p>The Manager hands over to the Refund Worker. The refund is under Meena's approval limit, so the worker asks Kavitha to confirm, calls the payment API once, and reads back the result in Tamil. Had the amount been above the limit, the Escalation Worker would have sent Meena's team a summary: transcript, photo, order details and the action already tried.</p>
+<p><b>Afterwards.</b> The Control Center shows the call, the workers used, the refund, its duration, and no failures.</p>
+</div>
+
+<h2 id="a2">A2. End users</h2>
+<h3>(a) People who build and manage the workforce</h3>
+<div class="tbl"><table>
+<tr><th>User</th><th>Who they are</th><th>Pain today</th><th>What they need</th></tr>
+<tr><td>Business owner / operations head</td><td>SME founder or support head, often non-technical, running on WhatsApp, spreadsheets and a small CRM.</td><td>Cannot afford round-the-clock multilingual staff. Chatbot tools need a developer. Hard to see what customers actually experience.</td><td>Describe the job in plain words, in Hindi or Tamil if they prefer. Guardrails on money actions. A simple dashboard.</td></tr>
+<tr><td>Developer / integrator</td><td>In-house engineer or agency building automation for several clients.</td><td>Stitching together speech, LLM, telephony and tools is slow. Multi-tenant security and testing are rebuilt each time.</td><td>API access, clean integration points, versioned workers, traces, sandbox testing.</td></tr>
+<tr><td>Human agent / supervisor</td><td>Support staff who receive escalations.</td><td>Escalated tickets arrive with no context, so the customer repeats everything.</td><td>Full transcript, task state, attachments and a suggested next step in one screen.</td></tr>
+</table></div>
+<h3>(b) People who talk to the workforce</h3>
+<div class="tbl"><table>
+<tr><th>User</th><th>Who they are</th><th>Pain today</th><th>What they need</th></tr>
+<tr><td>Customer</td><td>Often a mobile-first user in a Tier 2 or Tier 3 city, comfortable speaking but not typing, switching between a regional language and English.</td><td>Menu-driven IVR, English-only bots, long waits, and having to repeat the problem.</td><td>Speak naturally in their language, send a photo, get the issue actually resolved.</td></tr>
+<tr><td>Employee / field staff</td><td>Sales reps, delivery staff, shop-floor workers using internal tools.</td><td>Internal systems are English, form-heavy and desktop-oriented.</td><td>Ask by voice ("stock of item 42 in Coimbatore?") and get an answer or action without navigating screens.</td></tr>
+</table></div>
+
+<h2 id="a3">A3. Benefits to users</h2>
+<p>These are directional. Measure them in the pilot before claiming them.</p>
+<div class="tbl"><table>
+<tr><th>User</th><th>Benefit</th><th>How to measure</th></tr>
+<tr><td>Business owner</td><td>Out-of-hours coverage in 8+ languages without hiring per language. Setup in hours rather than a multi-week bot project <span class="est">estimate</span>.</td><td>Hours covered, languages live, time from idea to first live call.</td></tr>
+<tr><td>Business owner</td><td>Lower cost per resolved query if a share of routine calls is fully automated <span class="est">estimate, depends on query mix</span>.</td><td>Cost per resolution versus current human cost.</td></tr>
+<tr><td>Developer</td><td>Skips building the orchestration, testing and tenancy layers. Reuses connectors.</td><td>Days to first integrated worker.</td></tr>
+<tr><td>Human agent</td><td>Escalations arrive with context, so no re-asking.</td><td>Handle time on escalated cases, repeat-question rate.</td></tr>
+<tr><td>Customer</td><td>Speaks their own language, gets action rather than advice, no waiting in a queue.</td><td>First-contact resolution, wait time, satisfaction score.</td></tr>
+<tr><td>Employee</td><td>Hands-free access to internal data and tasks.</td><td>Tasks completed by voice, time per lookup.</td></tr>
+</table></div>
+
+<h2 id="a4">A4. What exists today</h2>
+<p>All rows below come from general knowledge and must be re-checked. Pricing for every vendor is <span class="v">VERIFY</span>.</p>
+<div class="tbl"><table>
+<tr><th>Category / examples</th><th>What it does</th><th>What it lacks versus this product</th><th>Pricing model</th></tr>
+<tr><td>Voice-agent platforms<br>Vapi, Retell, Bland</td><td>Build and run phone or web voice agents with telephony, STT, LLM, TTS handled for you.</td><td>Generally one agent per use case. No requirement-to-team generation, no manager/worker structure, weaker Indic depth <span class="v">VERIFY</span>.</td><td>Per-minute usage plus provider costs <span class="v">VERIFY</span></td></tr>
+<tr><td>Conversational builders<br>Voiceflow</td><td>Visual designer for chat and voice assistants.</td><td>Flows are hand-drawn. No auto-generated workforce, limited multi-agent coordination <span class="v">VERIFY</span>.</td><td>Seat and plan tiers <span class="v">VERIFY</span></td></tr>
+<tr><td>Agent frameworks<br>LangGraph, CrewAI, AutoGen</td><td>Code libraries for multi-agent logic.</td><td>Developer-only. No voice pipeline, dashboard, tenancy, escalation or deployment out of the box.</td><td>Open source, you pay for hosting and models <span class="v">VERIFY</span></td></tr>
+<tr><td>Workflow automation<br>n8n, Zapier</td><td>Connect apps with triggers and actions. Strong integration catalogues.</td><td>Deterministic flows, not real-time conversation. No voice-first interaction or worker personas.</td><td>Task or execution based <span class="v">VERIFY</span></td></tr>
+<tr><td>Traditional IVR and chatbot vendors</td><td>Menu-driven phone trees and scripted chat.</td><td>Rigid, poor with code-switching, slow to change, action limited to fixed scripts.</td><td>Licences, per-seat or per-minute, often contract based <span class="v">VERIFY</span></td></tr>
+<tr><td>Indian-language voice providers<br>examples: Sarvam, Bhashini, Krutrim, Google and Azure Indic voices</td><td>Speech recognition, synthesis and translation tuned for Indian languages.</td><td>Components, not a product. No orchestration, tools, dashboard or escalation.</td><td>Per-character or per-minute API, some public programmes <span class="v">VERIFY</span></td></tr>
+</table></div>
+
+<h2 id="a5">A5. How this product gives more benefit</h2>
+<h3>Gap analysis</h3>
+<p>No single category above covers all of: generating a team from a requirement, coordinating it in real time, speaking Indian languages naturally, acting in business systems, and escalating with context under one dashboard. Buyers today combine three or four of them.</p>
+<p><b>Where competitors are stronger:</b> voice platforms have mature telephony and latency tuning. Zapier and n8n have far larger integration libraries. Frameworks offer more flexibility for developers. Large vendors have enterprise compliance and support. We should integrate with these rather than fight them on breadth.</p>
+<h3>Differentiators</h3>
+<div class="diff">
+<div><b>Requirement-to-workforce generation</b>A non-technical owner gets a working, editable team from a sentence. This removes the biggest barrier for SMEs: not knowing how to design the flow.</div>
+<div><b>Manager and worker orchestration</b>Narrow workers with limited permissions are safer and easier to test than one agent with every tool. The manager makes failures traceable to one worker.</div>
+<div><b>Indic-first voice</b>Language detection, code-switching and per-language provider choice are built in, not added on. This is where most global tools are weakest <span class="v">VERIFY</span>.</div>
+<div><b>Escalation with context, plus one control center</b>Humans receive the full task state, and owners see workers, failures and escalations in one place. This is what makes owners trust AI with real actions.</div>
+</div>
+<h3>If a well-funded competitor copies us</h3>
+<p>A large voice platform could add team generation within a quarter. Ways to stay ahead: (1) build a library of tested Indian industry templates (retail, clinics, logistics, education) that improves with each deployment; (2) go deep on Indian connectors such as UPI-linked payment tools, Tally, Zoho and regional courier APIs; (3) publish per-language quality benchmarks and keep tuning them; (4) offer on-premise and data-residency options that global players prefer to skip; (5) win partners and resellers early.</p>
+
+<h2 id="a6">A6. How to deliver this to customers</h2>
+<div class="tbl"><table>
+<tr><th>Model</th><th>How it works and who it suits</th><th>Pros / cons</th><th>Effort</th></tr>
+<tr><td>1. Hosted SaaS</td><td>Customers sign up, describe a need, publish a link. Suits SMEs and non-technical owners.</td><td>Fastest to adopt and iterate, one deployment to maintain. You carry model and voice costs, and some buyers worry about data.</td><td>Medium. This is the core product.</td></tr>
+<tr><td>2. Embeddable widget / SDK</td><td>A script tag or mobile SDK puts the voice workforce inside the customer's website or app.</td><td>Meets users where they are. Adds browser and mic compatibility work.</td><td>Low to medium on top of SaaS.</td></tr>
+<tr><td>3. API-first (PaaS)</td><td>Developers create workforces and sessions by API. Suits agencies and product teams.</td><td>Broad reach, developer trust. Needs strong docs, versioning and stable contracts.</td><td>Medium. Design APIs early, expose later.</td></tr>
+<tr><td>4. Self-hosted / on-premise</td><td>Customer runs it in their own cloud. Suits banks, hospitals, government.</td><td>Unlocks regulated buyers. Support and upgrade burden is heavy, and local models are needed for full privacy.</td><td>High. Defer.</td></tr>
+<tr><td>5. White-label / reseller</td><td>Partners rebrand and sell to their clients. Suits Indian system integrators and telecom-adjacent firms.</td><td>Distribution without a large sales team. Needs multi-brand theming and partner billing.</td><td>Medium. After product-market fit.</td></tr>
+</table></div>
+<h3>Recommendation</h3>
+<p><b>MVP:</b> hosted SaaS (1) with a web voice link and a simple embed widget (2). Build the control plane as an API from the start so (3) becomes a matter of exposing it. <b>Later, in order:</b> API-first (3), white-label for partners (5), then self-hosted (4) once a regulated customer funds it. The reason: SaaS gives the fastest feedback loop for a small team, and the other models reuse the same core.</p>
+<h3>Pricing suggestion <span class="v">VERIFY</span></h3>
+<p>A free sandbox for testing with capped minutes. A per-workforce monthly platform fee plus usage billed per conversation minute, with a pass-through margin on voice and model costs. Enterprise tier with custom pricing for on-premise and white-label. Validate willingness to pay in five to ten pilots before fixing numbers.</p>
+<h3>Go-to-market in India</h3>
+<p>Start with one vertical where calls are repetitive and multilingual, for example D2C e-commerce, clinics, or logistics, and run paid pilots with a handful of SMEs. Sell through agencies and system integrators who already serve them. Lead with demos in the customer's own language, offer WhatsApp and phone-link deployment before app embedding, and price in rupees with simple monthly plans. Use hackathon visibility and case studies for early credibility.</p>
+
+
+<style>
+pre.mermaid{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;margin:14px 0;overflow-x:auto}
+pre.code{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:13px/1.5 ui-monospace,Menlo,monospace;overflow-x:auto;margin:12px 0}
+ol,ul.l{padding-left:22px;margin:0 0 14px}
+</style>
+
+<h2 id="b">Part B. Architecture</h2>
+<h3>B1. Overview</h3>
+<p>A stateless <b>control plane</b> (REST API for building, configuring, testing, deploying, dashboards) is separated from a stateful <b>real-time runtime</b> (one session process per live conversation, streaming audio over WebRTC or WebSocket). The control plane writes immutable workforce releases to Postgres. The runtime loads a release at session start and streams traces and usage events back through a queue, so a dashboard outage never breaks a call.</p>
+<pre class="mermaid">
+flowchart LR
+  U[Caller or web user] --> RT[Real-time runtime]
+  RT --> VAD[VAD + streaming STT]
+  VAD --> MGR[AI Manager]
+  MGR --> W1[Worker A]
+  MGR --> W2[Worker B]
+  W1 --> TL[Tool gateway]
+  W2 --> TL
+  TL --> SYS[CRM, ERP, APIs]
+  MGR --> TTS[TTS]
+  TTS --> U
+  MGR --> ESC[Escalation service]
+  ESC --> H[Human agent UI]
+  CP[Control plane API] --> DB[(Postgres + pgvector)]
+  RT --> DB
+  RT --> Q[Queue]
+  Q --> OBS[Traces and metrics]
+  OBS --> DASH[Control Center]
+  CP --> GEN[Workforce generator LLM]
+</pre>
+
+<h3>B2. Components</h3>
+<div class="tbl"><table>
+<tr><th>Component</th><th>Responsibility and tech</th><th>Failure mode and guard</th></tr>
+<tr><td>Requirement intake</td><td>Text box or mic, voice transcribed by the same STT. Output: a clean requirement plus clarifying questions.</td><td>Vague input. Guard: generator asks up to 3 questions, then proceeds with stated assumptions.</td></tr>
+<tr><td>Workforce generator</td><td>LLM with a strict JSON schema output (below), validated then shown for user editing.</td><td>Invalid or unsafe spec. Guard: schema validation, tools limited to the org's connected catalog, write tools default to approval required.</td></tr>
+<tr><td>Manager and workers</td><td>Manager classifies intent, delegates to a worker via a handoff, holds shared task state, and takes the reply back. Workers have their own prompt, tools and permissions. Plain state machine first, framework optional.</td><td>Loops and cost blowups. Guard: max hops per turn, max tool calls, per-session token and cost caps, fallback to human.</td></tr>
+<tr><td>Voice pipeline</td><td>VAD, streaming STT, LLM stream, streaming TTS, barge-in cancels TTS and LLM on user speech, endpointing tuned per language.</td><td>Provider stall. Guard: timeouts, circuit breaker, fallback provider, filler phrase when latency exceeds budget.</td></tr>
+<tr><td>Multimodal</td><td>Image, document or screen frame uploaded on a side channel, described by a vision model, and injected into the session as a tool result the manager can see. Video sampled into frames.</td><td>Injection in images or files. Guard: treat extracted text as untrusted data, size and type limits, malware scan.</td></tr>
+<tr><td>Multilingual layer</td><td>Language ID on the first utterance, per-language provider map in config, code-switch handled by a multilingual STT and an LLM instructed to mirror the user's mix.</td><td>Wrong language detected. Guard: re-detect each turn, let the user override.</td></tr>
+<tr><td>Tool and integration layer</td><td>Tool gateway signs webhooks, enforces per-worker permissions, blocks private IPs (SSRF), requires an approval gate for writes, and uses idempotency keys.</td><td>Duplicate or unauthorized action. Guard: idempotency key per task step, least privilege, audit log.</td></tr>
+<tr><td>Knowledge base</td><td>Upload, parse, chunk, embed, store in pgvector, retrieve top-k per worker scope, screen chunks for injection phrases.</td><td>Stale or poisoned docs. Guard: source tracking, re-index button, retrieval limited to that org.</td></tr>
+<tr><td>Escalation service</td><td>Triggers: user asks, low confidence, policy limit, repeated failure. Routes by rule to a human queue with the handoff payload.</td><td>No human available. Guard: callback request and ticket creation.</td></tr>
+<tr><td>Test harness</td><td>Replays scripted or simulated user turns (text, with optional synthetic audio) against a draft version with mocked tools and scores results.</td><td>Tests touching real systems. Guard: sandbox mode forces mock tool adapters.</td></tr>
+<tr><td>Deployment service</td><td>Publishes an immutable release, issues scoped public keys, serves web link, voice link and embed script, supports rollback.</td><td>Key leak. Guard: origin allowlist, short-lived session tokens, rate limits.</td></tr>
+<tr><td>Control Center</td><td>Dashboard of live sessions, worker success and failure, escalations, latency, cost, with trace drill-down.</td><td>Ingest lag. Guard: async queue, dashboards are eventually consistent.</td></tr>
+<tr><td>Auth, tenancy, metering</td><td>Managed auth, org_id on every row, Postgres row-level security, usage events per minute and token.</td><td>Cross-tenant leak. Guard: RLS plus tests that try cross-tenant reads.</td></tr>
+</table></div>
+<p><b>Generated spec (example):</b></p>
+<pre class="code">{
+  "workforce": "Customer Support", "languages": ["ta","hi","en"],
+  "manager": {"name":"Support Manager","routing":"intent","max_hops":4},
+  "workers": [
+    {"id":"order_check","instructions":"Verify order by ID","tools":["get_order"],"kb":["shipping_policy"]},
+    {"id":"refund","instructions":"Refund damaged items","tools":["create_refund"],
+     "permissions":{"create_refund":{"approval":"user_confirm","max_amount":2000}}},
+    {"id":"escalation","tools":["create_handoff"]}
+  ],
+  "flow": ["order_check","refund"], "escalate_if": ["amount>2000","user_requests_human"]
+}</pre>
+
+<h3>B3. Data model</h3>
+<pre class="mermaid">
+erDiagram
+  ORGANIZATION ||--o{ WORKFORCE : owns
+  WORKFORCE ||--|| MANAGER : has
+  MANAGER ||--o{ WORKER : coordinates
+  WORKER ||--o{ WORKER_VERSION : versions
+  WORKER }o--o{ TOOL : uses
+  WORKER ||--o{ PERMISSION : limited_by
+  WORKFORCE ||--o{ KNOWLEDGE_DOC : holds
+  WORKFORCE ||--o{ SESSION : runs
+  SESSION ||--o{ TASK : contains
+  TASK ||--o{ TASK_ASSIGNMENT : delegates
+  TASK ||--o{ ESCALATION : may_raise
+  SESSION ||--o{ TRACE_EVENT : logs
+  ORGANIZATION ||--o{ USAGE_EVENT : billed_by
+</pre>
+<p>Every table carries <code>org_id</code>. Key fields: <b>worker_version</b> (worker_id, spec_json, status, created_at, immutable), <b>tool</b> (type, endpoint, auth_ref, schema), <b>permission</b> (worker_id, tool_id, mode: allow / approval / deny, limits), <b>session</b> (channel, language, release_id, consent_flag), <b>task</b> (state, idempotency_key, result), <b>escalation</b> (reason, assignee, payload_json, status), <b>trace_event</b> (session_id, span, worker_id, latency_ms, redacted_payload), <b>usage_event</b> (metric, quantity, cost_estimate).</p>
+
+<h3>B4. Key sequences</h3>
+<p><b>Live voice session with routing, approval gate, retry and human escalation</b></p>
+<pre class="mermaid">
+sequenceDiagram
+  participant C as Customer
+  participant R as Runtime
+  participant M as Manager
+  participant O as Order worker
+  participant F as Refund worker
+  participant T as Tool gateway
+  participant H as Human queue
+  C->>R: Tamil speech (audio stream)
+  R->>M: transcript + language
+  M->>O: delegate order check
+  O->>T: get_order(id)
+  T-->>O: order data
+  O-->>M: verified
+  M->>F: delegate refund
+  F->>C: ask confirmation (approval gate)
+  C->>F: confirms
+  F->>T: create_refund (idempotency key)
+  T--xF: timeout
+  F->>T: retry same key
+  T-->>F: refund created
+  F-->>M: done
+  M->>R: reply text
+  R->>C: Tamil speech
+  Note over M,H: If amount over limit or user asks for human
+  M->>H: handoff payload (transcript, task state, image)
+  H-->>C: human joins with full context
+</pre>
+<p>The <b>requirement to workforce</b> flow is: user text or voice, intake, generator LLM, schema validation, editable draft, test run, publish release. The <b>multimodal turn</b> is: image uploaded on a side channel while audio streams, vision model returns a description, the description enters session state as untrusted data, and the manager references it in its next reply. Both are described in words here rather than diagrammed.</p>
+
+<h2 id="c">Part C. Technology stack</h2>
+<h3>C1. Stack summary <span class="v">All limits and versions: VERIFY</span></h3>
+<div class="tbl"><table>
+<tr><th>Layer</th><th>Recommended</th><th>Alternative</th><th>Main risk</th></tr>
+<tr><td>Frontend</td><td>Next.js + React + Tailwind</td><td>Vite + React</td><td>Mic and audio permissions on mobile browsers</td></tr>
+<tr><td>Backend API</td><td>FastAPI (Python)</td><td>Node + Fastify</td><td>Python async mistakes under load</td></tr>
+<tr><td>Voice framework</td><td>Pipecat or LiveKit Agents</td><td>Hand-rolled WebSocket</td><td>Fast-changing APIs</td></tr>
+<tr><td>VAD</td><td>Silero VAD</td><td>Framework built-in</td><td>Tuning for noisy Indian phone audio</td></tr>
+<tr><td>STT</td><td>Indic-capable streaming STT (for example Sarvam, Deepgram, Google)</td><td>Whisper-class self-hosted</td><td>Accuracy in code-switching, free-tier minutes</td></tr>
+<tr><td>LLM</td><td>Fast hosted model, one for manager, small one for workers. Model name: VERIFY</td><td>Second provider as fallback</td><td>Model retirement, rate limits</td></tr>
+<tr><td>TTS</td><td>Indic-capable streaming TTS</td><td>Browser speech synthesis (demo fallback)</td><td>Voice naturalness and latency</td></tr>
+<tr><td>Vector and relational DB</td><td>Postgres with pgvector (Supabase or Neon)</td><td>Qdrant plus Postgres</td><td>Free-tier size and connection limits</td></tr>
+<tr><td>Cache and sessions</td><td>Redis (Upstash)</td><td>In-memory for dev</td><td>Command limits</td></tr>
+<tr><td>Object storage</td><td>S3-compatible (R2 or Supabase Storage)</td><td>Local disk in dev</td><td>Egress costs</td></tr>
+<tr><td>Queue and workers</td><td>Redis streams with a Python worker (arq)</td><td>Celery, cloud queues</td><td>Dead-letter handling</td></tr>
+<tr><td>Auth</td><td>Supabase Auth or Clerk</td><td>Auth0, self-built JWT</td><td>Vendor limits, tenant claim mistakes</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry + Langfuse or Grafana</td><td>Sentry only</td><td>Logging PII by accident</td></tr>
+<tr><td>Secrets, hosting, CI/CD</td><td>Cloud secret store, Fly.io or Render (runtime), Vercel (UI), GitHub Actions</td><td>Railway, a single VPS</td><td>Cold starts hurt voice, so keep the runtime always on</td></tr>
+</table></div>
+<h3>C2. Learning notes per technology</h3>
+<p>The full seven-point walkthrough for every tool is not expanded on this page. The essentials, in data-flow order: browser mic (WebRTC or WebSocket) then VAD then STT then LLM then TTS then audio back. For each, learn first: <i>Next.js app router</i>, <i>FastAPI async and WebSockets</i>, <i>Pipecat pipelines</i>, <i>Silero VAD</i>, your STT vendor's streaming docs, <i>LLM tool calling and JSON schema output</i>, <i>pgvector similarity search</i>, <i>Postgres row-level security</i>, <i>Redis streams</i>, <i>OpenTelemetry basics</i>. Common beginner mistakes: buffering full audio before STT, ignoring barge-in, forgetting <code>org_id</code> in a query, and logging raw transcripts.</p>
+<h3>C3. One request through the stack</h3>
+<p>The caller opens the voice link (Next.js) and gets a short-lived token from FastAPI, which checks auth and the release. The browser streams audio over WebRTC to the runtime. Silero VAD marks speech, streaming STT returns Tamil text, the manager (LLM) picks a worker, the worker calls a tool through the gateway (secrets from the secret store, result in Postgres), retrieval pulls policy text from pgvector, and the answer streams to TTS and back to the caller. Trace and usage events go through Redis to the queue worker, then into Postgres and the Control Center.</p>
+<h3>C4. Repository and local setup</h3>
+<pre class="code">/apps/web            Next.js UI + Control Center
+/apps/api            FastAPI control plane
+/apps/runtime        Voice session service
+/packages/spec       JSON schemas for workforce spec
+/packages/tools      Tool adapters + mocks
+/infra               docker-compose, migrations, CI
+/tests               simulation scenarios</pre>
+<p>Run locally with <code>docker compose up</code> (Postgres, Redis, mock STT that reads text files, mock TTS that returns a beep, a stub LLM that returns canned JSON, mock CRM). Set <code>MOCK_PROVIDERS=1</code> so no paid keys are needed.</p>
+
+<h2 id="d">Part D. Security and reliability</h2>
+<h3>D1. Security measures</h3>
+<div class="tbl"><table>
+<tr><th>Risk</th><th>Control and where</th><th>In plain words (top 8)</th></tr>
+<tr><td>Cross-tenant leakage</td><td>Postgres RLS on org_id, tested in CI (database)</td><td>One company can never see another's data.</td></tr>
+<tr><td>Key and token handling</td><td>Hashed keys, scoped short-lived session tokens, secret store (API, deploy service)</td><td>A stolen link cannot be reused for long or for other things.</td></tr>
+<tr><td>Auth and sessions</td><td>Managed auth, MFA for admins, httpOnly cookies (auth layer)</td><td>Only the right people can log in.</td></tr>
+<tr><td>Prompt injection via voice, text, images, docs, KB</td><td>Untrusted-data framing, injection screening, tools gated regardless of prompt (runtime, KB, tool gateway)</td><td>Hidden instructions in a file or photo cannot make the AI do things it is not allowed to do.</td></tr>
+<tr><td>Unauthorized write actions</td><td>Least-privilege permissions, approval gates, amount limits (tool gateway)</td><td>Money actions need a confirmation and stay within limits.</td></tr>
+<tr><td>SSRF via tool URLs</td><td>Block private and metadata IP ranges, allowlist domains (gateway)</td><td>Tools cannot be tricked into reaching internal systems.</td></tr>
+<tr><td>Webhook spoofing and replay</td><td>HMAC signature, timestamp window, nonce (webhook endpoints)</td><td>Fake or replayed messages are rejected.</td></tr>
+<tr><td>PII, consent, retention, DPDP Act <span class="v">VERIFY</span></td><td>Recording consent prompt, PII redaction in traces, retention timers, deletion API (runtime, storage)</td><td>Personal data is minimised, users are told, and it is deleted on time.</td></tr>
+<tr><td>Abuse, toll fraud, cost caps</td><td>Rate limits, per-org spend caps, country allowlists, anomaly alerts (API, metering)</td><td>Attackers cannot run up your bill.</td></tr>
+<tr><td>Audit, supply chain, uploads</td><td>Append-only audit log, dependency scanning and lockfiles, file type and size checks with malware scan</td><td>Every action is traceable and bad files are stopped at the door.</td></tr>
+</table></div>
+<h3>D2. Reliability</h3>
+<ul class="l">
+<li><b>Crash recovery:</b> session state checkpointed in Redis, reconnect resumes at the last turn.</li>
+<li><b>Failover:</b> circuit breakers per provider with a secondary STT, LLM and TTS.</li>
+<li><b>Retries and dead letters:</b> exponential backoff, then a dead-letter queue visible in the dashboard.</li>
+<li><b>Graceful shutdown:</b> stop accepting sessions, let active calls finish or hand off.</li>
+<li><b>Idempotency:</b> one key per task step so retries never repeat a refund.</li>
+<li><b>Backups:</b> daily database backups with a tested restore, object storage versioning.</li>
+</ul>
+
+<h2 id="e">Part E. Build plan</h2>
+<h3>E1. Eight-week MVP</h3>
+<div class="tbl"><table>
+<tr><th>Week</th><th>Build</th><th>Exit test</th></tr>
+<tr><td>1</td><td>Repo, auth, tenancy with RLS, mock providers</td><td>Two test orgs cannot read each other's rows</td></tr>
+<tr><td>2</td><td>Voice loop in English: VAD, STT, LLM, TTS, barge-in</td><td>p95 latency measured, interrupt works</td></tr>
+<tr><td>3</td><td>Indic languages, language detection, code-switching</td><td>Tamil and Hindi scripted calls pass</td></tr>
+<tr><td>4</td><td>Manager and 2 to 3 workers, shared state, loop guards</td><td>Correct routing on 20 test utterances</td></tr>
+<tr><td>5</td><td>Tool gateway, one real action, approval gate, KB</td><td>Refund runs once even on forced retry</td></tr>
+<tr><td>6</td><td>Workforce generator and editor, test harness</td><td>Sentence to runnable draft, simulated run passes</td></tr>
+<tr><td>7</td><td>Escalation with context, dashboard, deploy link</td><td>Human sees full handoff, dashboard shows a live call</td></tr>
+<tr><td>8</td><td>Hardening, image input, demo rehearsal</td><td>Three clean full runs</td></tr>
+</table></div>
+<p><b>Fake or stub in the demo:</b> billing, video input (use still images), most connectors (one real, others mocked), advanced analytics. <b>Defer:</b> self-hosting, white-label, full DPDP tooling, SSO.</p>
+<h3>E2. Three-minute demo</h3>
+<ol>
+<li>0:00 Type "handle order queries and refunds", show the generated team (30s).</li>
+<li>0:30 Run a simulated test, show the trace (20s).</li>
+<li>0:50 Publish, open the voice link, speak Tamil with some English mixed in (40s).</li>
+<li>1:30 Upload a damaged-item photo mid-call, manager routes to Order then Refund, confirm, real refund fires (50s).</li>
+<li>2:20 Ask for a human, show the handoff screen with transcript, photo and task state (25s).</li>
+<li>2:45 Control Center: live session, worker stats, escalation logged (15s).</li>
+</ol>
+<h3>E3. Risks and open questions</h3>
+<div class="tbl"><table>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Latency above target on free tiers</td><td>Streaming everywhere, short prompts, smaller worker models, filler phrases</td></tr>
+<tr><td>Weak Indic STT or TTS quality</td><td>Benchmark providers early, per-language mapping</td></tr>
+<tr><td>Free-tier limits hit during the demo</td><td>Pre-buy small paid credits, cached fallback demo</td></tr>
+<tr><td>Model names retired</td><td>Model name in config only, second provider</td></tr>
+<tr><td>Generated workflows are wrong</td><td>Always show an editable draft and require a test run</td></tr>
+<tr><td>Agent loops or runaway cost</td><td>Hop, token and spend caps</td></tr>
+<tr><td>Prompt injection</td><td>Permissions enforced outside the model</td></tr>
+<tr><td>Scope creep in 8 weeks</td><td>Fixed MVP list, weekly exit tests</td></tr>
+<tr><td>Telephony and compliance in India</td><td>Start with web link, add phone later after checking rules <span class="v">VERIFY</span></td></tr>
+<tr><td>Competitor copies the idea</td><td>Vertical templates, Indic depth, integrations</td></tr>
+</table></div>
+<p><b>Questions before starting:</b> Which vertical and one real system to integrate first? Web link only, or phone number too? Which languages are mandatory for the demo? What is the monthly budget for paid API credits? Any data residency requirement?</p>
+</main>
+</div>
+</body>
+</html>

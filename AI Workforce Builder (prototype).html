@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Workforce Builder (prototype)</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fbfcfe;--panel:#f1f5f9;--ink:#15233b;--mute:#5a6779;--line:#d9e1ea;--teal:#0e6b6b;--tbg:#e3f2f1;--gold:#b7791f;--gbg:#fbf1dc;--red:#b3261e}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 Newsreader,Georgia,serif}
+h1,h2,h3,button,.ui,label,input,select{font-family:"Bricolage Grotesque",system-ui,sans-serif}
+.app{max-width:960px;margin:0 auto;padding:20px 20px 80px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:28px;font:500 14px "Bricolage Grotesque",sans-serif}
+.steps span{padding:6px 12px;border:1px solid var(--line);border-radius:999px;color:var(--mute);background:#fff}
+.steps span.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.steps span.done{color:var(--teal);border-color:var(--teal)}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em}
+h2{font-size:26px;margin:0 0 6px}
+.sub{color:var(--mute);margin:0 0 20px}
+textarea{width:100%;min-height:130px;font:19px/1.5 Newsreader,serif;padding:16px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);resize:vertical}
+textarea:focus,input:focus,select:focus,button:focus-visible{outline:3px solid #9fd3d0;outline-offset:1px}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 16px;border-radius:8px;font-size:15px;font-weight:500}
+button.p{background:var(--teal);border-color:var(--teal);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.chips button{border-radius:999px;font-size:14px;background:var(--panel)}
+.mgr{background:var(--teal);color:#fff;border-radius:10px;padding:14px 18px;max-width:420px;margin:0 auto}
+.mgr small{opacity:.85;font:14px "Bricolage Grotesque",sans-serif}
+.line{width:2px;height:22px;background:var(--line);margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;transition:border-color .2s,box-shadow .2s}
+.card h3{margin:0 0 4px;font-size:17px}
+.card p{margin:0 0 8px;font-size:15px;color:var(--mute);line-height:1.45}
+.tag{display:inline-block;font:500 12px "Bricolage Grotesque",sans-serif;background:var(--panel);border-radius:5px;padding:2px 8px;margin:0 4px 4px 0}
+.tag.w{background:var(--gbg);color:var(--gold)}
+.card.act{border-color:var(--teal);box-shadow:0 0 0 3px var(--tbg)}
+.int{display:grid;grid-template-columns:1fr;gap:10px}
+.int .card{display:grid;gap:8px}
+.int input{padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:15px;width:100%}
+.hint{font-size:14px;color:var(--mute)}
+.st{font:600 13px "Bricolage Grotesque",sans-serif}
+.ok{color:var(--teal)}.bad{color:var(--red)}
+.demo{background:var(--gbg);border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center;font:500 15px "Bricolage Grotesque",sans-serif;margin-bottom:14px}
+.chat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;min-height:220px;display:grid;gap:8px;align-content:start}
+.m{max-width:85%;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:16px;line-height:1.45}
+.m.u{justify-self:end;background:var(--tbg)}
+.m b{display:block;font:600 12px "Bricolage Grotesque",sans-serif;color:var(--teal);margin-bottom:2px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.mini{display:grid;gap:8px;align-content:start}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.stat{background:var(--panel);border-radius:8px;padding:10px 14px}.stat b{display:block;font:700 24px "Bricolage Grotesque",sans-serif}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px}
+.hide{display:none}
+@media(max-width:700px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="steps" id="steps"></div>
+<div id="v"></div>
+</div>
+<script>
+const TOOLS={
+orders:{n:"Order database",hint:"Your store admin panel, under Settings, then API or Developers."},
+pay:{n:"Payment gateway",hint:"Your payment provider dashboard, in the API keys section. Use a test key first."},
+helpdesk:{n:"Helpdesk / ticketing",hint:"Helpdesk admin settings, under API tokens."},
+crm:{n:"CRM",hint:"CRM settings, under Integrations or API access."},
+cal:{n:"Calendar",hint:"Your calendar provider's developer console. Create an access key for one calendar."},
+wa:{n:"WhatsApp / SMS",hint:"Your messaging provider dashboard, under API credentials."},
+ats:{n:"Candidate tracker",hint:"Your hiring tool settings, under API or Integrations."}};
+const T=[
+{id:"support",name:"Customer Support",kw:"support refund order complaint delivery customer return help query",mgr:"AI Support Manager",
+ w:[["Query Worker","Answers product and policy questions from the knowledge base.",[]],["Order Verification Worker","Finds the order and checks status and delivery.",["orders"]],["Refund Worker","Starts refunds within the limit after customer confirmation.",["pay"]],["Escalation Worker","Sends hard cases to a human with the full context.",["helpdesk"]]],
+ chat:[["u","En saree torn aagi vandhuchu, order 4821."],["Order Verification Worker","Order 4821 found. Delivered 2 days ago."],["u","Photo anuppitten. Refund venum."],["Refund Worker","Damage confirmed from photo. Refund of Rs 1,499 needs your OK. Confirm?"],["u","Aama, confirm."],["Refund Worker","Refund started. Reference RF-2291. Money arrives in 3 to 5 days."]]},
+{id:"sales",name:"Sales Lead Follow-up",kw:"sales lead follow prospect demo enquiry inquiry quote crm",mgr:"AI Sales Manager",
+ w:[["Lead Qualifier","Asks budget, need and timeline and scores the lead.",["crm"]],["Scheduler","Books a demo slot on the sales team's calendar.",["cal"]],["CRM Updater","Writes notes and stage changes to the CRM.",["crm"]],["Follow-up Worker","Sends reminders and confirmations.",["wa"]]],
+ chat:[["u","Mujhe 50 users ke liye demo chahiye."],["Lead Qualifier","Great. Budget range aur start date bata sakte hain?"],["u","Next month, around 40k."],["Scheduler","Kal 4 baje ya Thursday 11 baje?"],["u","Thursday."],["Follow-up Worker","Demo booked. Confirmation WhatsApp par bhej diya."]]},
+{id:"booking",name:"Appointment Booking",kw:"appointment book booking clinic doctor salon slot schedule patient",mgr:"AI Front Desk Manager",
+ w:[["Enquiry Worker","Answers timings, fees and services.",[]],["Booking Worker","Finds a free slot and books it.",["cal"]],["Reminder Worker","Sends reminders and handles reschedules.",["wa"]],["Escalation Worker","Passes urgent or unclear cases to staff.",["helpdesk"]]],
+ chat:[["u","Naalaiku doctor appointment kedaikuma?"],["Enquiry Worker","Aama, Dr. Rao naalaiku available."],["Booking Worker","10.30 AM or 4.00 PM?"],["u","10.30."],["Booking Worker","Booked for 10.30 AM."],["Reminder Worker","Reminder naalaiku kalaila anuppapadum."]]},
+{id:"hr",name:"Recruitment Screening",kw:"hr recruit hiring candidate resume interview screening job applicant",mgr:"AI Recruiter Manager",
+ w:[["Resume Screener","Reads resumes and matches them to the job.",["ats"]],["Interview Scheduler","Offers slots to shortlisted candidates.",["cal"]],["Candidate Q&A Worker","Answers role and policy questions.",[]],["Escalation Worker","Flags special cases for the hiring manager.",["helpdesk"]]],
+ chat:[["u","Naan Java developer, 3 years experience."],["Resume Screener","Profile matches the role. Shortlisting."],["Interview Scheduler","Interview Monday 11 AM or Tuesday 3 PM?"],["u","Tuesday."],["Interview Scheduler","Booked. Invite sent to your email."]]}];
+const S=["Describe","Your team","Connect","Test","Deploy"];
+let step=0,tpl=null,demo=true,conn={},prompt="";
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function go(n){step=n;draw()}
+function match(t){const w=t.toLowerCase().split(/\W+/);let best=T[0],b=-1;T.forEach(x=>{const k=x.kw.split(" "),sc=w.filter(y=>k.includes(y)).length;if(sc>b){b=sc;best=x}});return best}
+function draw(){
+$("#steps").innerHTML=S.map((s,i)=>`<span class="${i==step?"on":i<step?"done":""}">${s}</span>`).join("");
+[v1,v2,v3,v4,v5][step]();window.scrollTo(0,0)}
+function v1(){$("#v").innerHTML=`<h1>What should your AI team do?</h1><p class="sub">Type or speak your need in any language. The platform arranges a team of AI workers for it.</p>
+<textarea id="p" placeholder="Example: I need to handle customer refunds and order questions." aria-label="Describe your need">${esc(prompt)}</textarea>
+<div class="row chips"><span class="hint">Try:</span>${["Handle refunds and order questions","Follow up sales leads and book demos","Book clinic appointments","Screen resumes and schedule interviews"].map(x=>`<button>${x}</button>`).join("")}</div>
+<div class="row"><button class="p" id="go">Build my team</button></div>
+<p class="hint">Prototype: 4 ready-made templates. Your text is matched to the closest one.</p>`;
+document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>{$("#p").value=b.textContent});
+$("#go").onclick=()=>{prompt=$("#p").value.trim();if(!prompt){$("#p").focus();return}tpl=match(prompt);conn={};go(1)}}
+function v2(){const x=tpl;
+$("#v").innerHTML=`<h2>Your team: ${x.name}</h2><p class="sub">Closest match to "${esc(prompt)}". Pick another template if this is not right.</p>
+<div class="row"><select id="sw" aria-label="Template">${T.map(t=>`<option value="${t.id}" ${t.id==x.id?"selected":""}>${t.name}</option>`).join("")}</select></div>
+<div class="mgr"><b>${x.mgr}</b><br><small>Understands the request, picks the right worker, keeps track of the task.</small></div><div class="line"></div>
+<div class="grid">${x.w.map(w=>`<div class="card"><h3>${w[0]}</h3><p>${w[1]}</p>${w[2].map(t=>`<span class="tag">${TOOLS[t].n}</span>`).join("")||'<span class="tag">Knowledge base only</span>'}${w[2].includes("pay")?'<br><span class="tag w">Confirmation needed</span>':""}</div>`).join("")}</div>
+<div class="row"><button id="b">Back</button><button class="p" id="n">Looks good, connect tools</button></div>`;
+$("#sw").onchange=e=>{tpl=T.find(t=>t.id==e.target.value);conn={};v2()};$("#b").onclick=()=>go(0);$("#n").onclick=()=>go(2)}
+function needed(){return[...new Set(tpl.w.flatMap(w=>w[2]))]}
+function v3(){const n=needed();
+$("#v").innerHTML=`<h2>Connect your tools</h2><p class="sub">Your workers need access to these systems to do real work.</p>
+<label class="demo"><input type="checkbox" id="d" ${demo?"checked":""}> Use demo data (no real keys needed)</label>
+<div class="int">${n.length?n.map(k=>`<div class="card"><h3>${TOOLS[k].n}</h3>
+<input id="k-${k}" type="password" placeholder="Paste API key" aria-label="API key for ${TOOLS[k].n}" ${demo?"disabled":""}>
+<div class="hint">Where do I get this key? ${TOOLS[k].hint}</div>
+<div class="row" style="margin:0"><button data-k="${k}">Test connection</button><span class="st" id="s-${k}">${conn[k]?'<span class="ok">Connected</span>':"Not connected"}</span></div></div>`).join(""):'<div class="card">This team needs no external tools.</div>'}</div>
+<div class="row"><button id="b">Back</button><button class="p" id="n">Continue to test</button></div>`;
+$("#d").onchange=e=>{demo=e.target.checked;v3()};
+document.querySelectorAll("button[data-k]").forEach(b=>b.onclick=()=>{const k=b.dataset.k,el=$("#s-"+k),val=demo?"":$("#k-"+k).value.trim();
+if(!demo&&val.length<8){el.innerHTML='<span class="bad">Key looks too short</span>';return}
+el.textContent="Testing...";setTimeout(()=>{conn[k]=1;el.innerHTML='<span class="ok">Connected'+(demo?" (demo data)":"")+'</span>'},600)});
+$("#b").onclick=()=>go(1);$("#n").onclick=()=>{if(n.some(k=>!conn[k])){n.filter(k=>!conn[k]).forEach(k=>$("#s-"+k).innerHTML='<span class="bad">Test this connection first</span>');return}go(3)}}
+function v4(){const x=tpl;
+$("#v").innerHTML=`<h2>Test your team</h2><p class="sub">A simulated conversation. Watch which worker takes each step.</p>
+<div class="two"><div class="chat" id="c" aria-live="polite"></div><div class="mini"><div class="card" id="m"><h3>${x.mgr}</h3><p>Waiting</p></div>${x.w.map((w,i)=>`<div class="card" id="w${i}"><h3>${w[0]}</h3></div>`).join("")}</div></div>
+<div class="row"><button id="b">Back</button><button id="r">Run simulation</button><button class="p" id="n">Deploy</button></div>`;
+$("#b").onclick=()=>go(2);$("#n").onclick=()=>go(4);
+$("#r").onclick=()=>{const c=$("#c");c.innerHTML="";document.querySelectorAll(".card.act").forEach(e=>e.classList.remove("act"));$("#r").disabled=true;
+x.chat.forEach((m,i)=>setTimeout(()=>{const u=m[0]=="u";c.insertAdjacentHTML("beforeend",`<div class="m ${u?"u":""}">${u?"":"<b>"+m[0]+"</b>"}${esc(m[1])}</div>`);
+document.querySelectorAll(".card.act").forEach(e=>e.classList.remove("act"));
+if(!u){const j=x.w.findIndex(w=>w[0]==m[0]);if(j>=0)$("#w"+j).classList.add("act");$("#m p").textContent="Routing to "+m[0]}
+if(i==x.chat.length-1)$("#r").disabled=false},i*1100))}}
+function v5(){const id=tpl.id;
+$("#v").innerHTML=`<h2>Your team is ready</h2><p class="sub">Share the voice link, or embed it in your site.</p>
+<div class="card"><h3>Voice link</h3><div class="row"><input readonly value="https://workforce.example/${id}/talk" style="flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:8px;min-width:200px" aria-label="Voice link"><button id="cp">Copy</button></div>
+<h3>Embed</h3><pre>&lt;script src="https://workforce.example/embed.js" data-team="${id}"&gt;&lt;/script&gt;</pre></div>
+<h3 style="margin-top:22px">Control Center (sample data)</h3>
+<div class="stats"><div class="stat"><b>12</b>Conversations today</div><div class="stat"><b>9</b>Completed tasks</div><div class="stat"><b>2</b>Escalated to humans</div><div class="stat"><b>1</b>Failed tool call</div></div>
+<div class="row"><button id="b">Back</button><button class="p" id="a">Start a new team</button></div>`;
+$("#cp").onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText("https://workforce.example/"+id+"/talk").catch(()=>{});e.target.textContent="Copied"};
+$("#b").onclick=()=>go(3);$("#a").onclick=()=>{prompt="";tpl=null;conn={};go(0)}}
+draw();
+</script>
+</body>
+</html>

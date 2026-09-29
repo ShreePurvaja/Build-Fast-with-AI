@@ -1,0 +1,52 @@
+# Environment variables & secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Node.js & Frontend
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+
+# Python & Virtual Environments
+__pycache__/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/*/__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+.uv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS System files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & Temp
+*.log
+tmp/
+temp/

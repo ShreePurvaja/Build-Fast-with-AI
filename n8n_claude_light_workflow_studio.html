@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Light Theme | n8n Workflow Studio & Executions Manager</title>
+<!-- Google Fonts & Lucide Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+  :root {
+    /* Claude Light Theme Palette */
+    --bg-main: #FAF8F5;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F4F1EA;
+    --bg-hover: #ECE7DE;
+    
+    --border-color: #E6E1D7;
+    --border-strong: #D6CFBF;
+    
+    --text-main: #2B2826;
+    --text-muted: #6E685E;
+    --text-light: #9B9488;
+    
+    --claude-orange: #D97757;
+    --claude-orange-hover: #C15C3D;
+    --claude-orange-light: #FDF3E9;
+    
+    --status-success: #0F766E;
+    --status-success-bg: #E6F4F1;
+    --status-error: #C93B2B;
+    --status-error-bg: #FCEAE8;
+    --status-warning: #D97706;
+    --status-warning-bg: #FEF3C7;
+    
+    --cat-ai: #D97757;
+    --cat-trigger: #10B981;
+    --cat-tool: #3B82F6;
+    --cat-action: #8B5CF6;
+    
+    --shadow-sm: 0 1px 2px rgba(43, 40, 38, 0.05);
+    --shadow-md: 0 4px 12px rgba(43, 40, 38, 0.08);
+    --shadow-lg: 0 12px 32px rgba(43, 40, 38, 0.12);
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Navigation Bar */
+  .app-navbar {
+    height: 56px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 50;
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 16.5px;
+    color: var(--text-main);
+    text-decoration: none;
+  }
+
+  .brand-tag {
+    background: var(--claude-orange);
+    color: #fff;
+    padding: 3px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .nav-tabs {
+    display: flex;
+    background: var(--bg-subtle);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+  }
+
+  .nav-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-tab:hover { color: var(--text-main); }
+  .nav-tab.active {
+    background: var(--bg-surface);
+    color: var(--claude-orange);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-main);
+  }
+
+  .btn-primary {
+    background: var(--claude-orange);
+    color: #FFFFFF;
+    border-color: var(--claude-orange);
+    box-shadow: 0 2px 6px rgba(217, 119, 87, 0.25);
+  }
+
+  .btn-primary:hover {
+    background: var(--claude-orange-hover);
+    border-color: var(--claude-orange-hover);
+  }
+
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* Main App Container */
+  .app-container {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+
+  /* Left Sidebar */
+  .app-sidebar {
+    width: 210px;
+    background: var(--bg-subtle);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 14px 10px;
+    gap: 6px;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-light);
+    padding: 8px 10px 4px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .sidebar-item:hover { background: var(--bg-hover); color: var(--text-main); }
+  .sidebar-item.active {
+    background: var(--bg-surface);
+    color: var(--claude-orange);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+  }
+
+  /* Views */
+  .view-container { flex: 1; position: relative; overflow: hidden; }
+  .view-tab { display: none; width: 100%; height: 100%; flex-direction: column; }
+  .view-tab.active { display: flex; }
+
+  /* Overview View */
+  .overview-content { padding: 24px 32px; overflow-y: auto; flex: 1; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .data-table th { background: var(--bg-subtle); color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 12px 20px; border-bottom: 1px solid var(--border-color); }
+  .data-table td { padding: 14px 20px; border-bottom: 1px solid var(--border-color); }
+
+  /* Canvas Editor */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    background-color: var(--bg-main);
+    background-image: radial-gradient(#D6CFBF 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+    overflow: hidden;
+  }
+
+  .connections-svg { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+  .wire-path { stroke: var(--border-strong); stroke-width: 2.5px; fill: none; }
+  .wire-path.active-wire { stroke: var(--claude-orange); stroke-dasharray: 8; animation: flowDash 1s linear infinite; }
+  @keyframes flowDash { to { stroke-dashoffset: -16; } }
+
+  .node-element {
+    position: absolute;
+    width: 240px;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    cursor: move;
+  }
+
+  .node-element.selected { border-color: var(--claude-orange); box-shadow: 0 0 0 3px var(--claude-orange-light); }
+  .node-element.running { border-color: var(--status-warning); box-shadow: 0 0 0 4px var(--status-warning-bg); }
+  .node-element.completed { border-color: var(--status-success); box-shadow: 0 0 0 3px var(--status-success-bg); }
+
+  .node-header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-color); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .node-icon { width: 28px; height: 28px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .node-body { padding: 10px 12px; font-size: 12px; color: var(--text-muted); }
+
+  .port-handle {
+    width: 12px; height: 12px; background: var(--bg-surface); border: 2px solid var(--border-strong); border-radius: 50%; position: absolute;
+  }
+  .port-left { left: -6px; top: 50%; transform: translateY(-50%); }
+  .port-right { right: -6px; top: 50%; transform: translateY(-50%); }
+
+  /* Executions View */
+  .executions-layout { display: flex; flex: 1; height: 100%; }
+  .executions-list-panel { width: 320px; border-right: 1px solid var(--border-color); background: var(--bg-surface); }
+  .execution-item { padding: 14px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; }
+  .execution-item.active { background: var(--claude-orange-light); border-left: 3px solid var(--claude-orange); }
+
+  /* Modal Backdrop */
+  .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(43,40,38,0.35); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-backdrop.active { display: flex; }
+  .node-picker-modal { width: 620px; background: var(--bg-surface); border-radius: var(--radius-xl); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .picker-search-header { padding: 16px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-color); }
+  .picker-search-box { display: flex; gap: 10px; align-items: center; background: var(--bg-surface); border: 1.5px solid var(--border-strong); padding: 10px; border-radius: var(--radius-md); }
+  .picker-search-box input { border: none; outline: none; width: 100%; font-size: 14px; }
+
+  /* Inspector Drawer */
+  .inspector-drawer { position: fixed; top: 56px; right: 0; width: 700px; height: calc(100vh - 56px); background: var(--bg-surface); border-left: 1px solid var(--border-color); z-index: 90; display: none; flex-direction: column; }
+  .inspector-drawer.active { display: flex; }
+  .drawer-header { height: 52px; padding: 0 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); }
+  .drawer-body { flex: 1; display: flex; overflow: hidden; }
+  .drawer-col-input { width: 220px; border-right: 1px solid var(--border-color); background: var(--bg-subtle); padding: 16px; }
+  .drawer-col-main { flex: 1; padding: 20px; overflow-y: auto; }
+  .drawer-col-output { width: 220px; border-left: 1px solid var(--border-color); background: var(--bg-subtle); padding: 16px; }
+  
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12.5px; font-weight: 600; margin-bottom: 6px; display: block; }
+  .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; }
+  textarea.form-control { min-height: 110px; font-family: var(--font-mono); font-size: 12px; }
+
+  .code-block { background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px; font-family: var(--font-mono); font-size: 11.5px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+  <header class="app-navbar">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="#" class="brand-logo">
+        <i data-lucide="git-fork" style="color: var(--claude-orange); width: 22px;"></i>
+        Claude x n8n Studio
+        <span class="brand-tag">LIGHT THEME</span>
+      </a>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-view="overview" onclick="switchView('overview')">
+          <i data-lucide="layout-dashboard" style="width: 15px;"></i> Overview
+        </button>
+        <button class="nav-tab" data-view="editor" onclick="switchView('editor')">
+          <i data-lucide="workflow" style="width: 15px;"></i> Editor Canvas
+        </button>
+        <button class="nav-tab" data-view="executions" onclick="switchView('executions')">
+          <i data-lucide="history" style="width: 15px;"></i> Executions Log
+        </button>
+      </nav>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-primary" onclick="openNodePicker()"><i data-lucide="plus" style="width: 15px;"></i> Add Node</button>
+      <button class="btn btn-primary" style="background: var(--status-success); border-color: var(--status-success);" onclick="triggerWorkflowExecution()">
+        <i data-lucide="play" style="width: 15px;"></i> Test Execution
+      </button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <aside class="app-sidebar">
+      <div class="sidebar-title">Workspace</div>
+      <a class="sidebar-item active" onclick="switchView('overview')"><i data-lucide="grid" style="width: 16px;"></i> Overview</a>
+      <a class="sidebar-item" onclick="switchView('editor')"><i data-lucide="cpu" style="width: 16px;"></i> Workflows</a>
+      <a class="sidebar-item" onclick="switchView('executions')"><i data-lucide="activity" style="width: 16px;"></i> Executions Log</a>
+    </aside>
+
+    <main class="view-container">
+      
+      <!-- OVERVIEW -->
+      <div id="view-overview" class="view-tab active">
+        <div class="overview-content">
+          <h1 style="font-size: 24px; font-family: var(--font-heading); margin-bottom: 6px;">Overview</h1>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">All active workflows, credentials, and session execution traces</p>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div style="color: var(--text-muted); font-size: 13px; font-weight: 600;">Prod. Executions</div>
+              <div style="font-size: 28px; font-weight: 800; font-family: var(--font-heading);" id="kpi-total-exec">1,428</div>
+              <div style="color: var(--status-success); font-size: 12px; margin-top: 4px;">+14.2% last 7 days</div>
+            </div>
+            <div class="kpi-card">
+              <div style="color: var(--text-muted); font-size: 13px; font-weight: 600;">Failed Executions</div>
+              <div style="font-size: 28px; font-weight: 800; font-family: var(--font-heading); color: var(--status-error);">3</div>
+              <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">0.2% failure rate</div>
+            </div>
+            <div class="kpi-card">
+              <div style="color: var(--text-muted); font-size: 13px; font-weight: 600;">Time Saved</div>
+              <div style="font-size: 28px; font-weight: 800; font-family: var(--font-heading);">84.5 hrs</div>
+              <div style="color: var(--status-success); font-size: 12px; margin-top: 4px;">Automated execution</div>
+            </div>
+            <div class="kpi-card">
+              <div style="color: var(--text-muted); font-size: 13px; font-weight: 600;">Avg Run Time</div>
+              <div style="font-size: 28px; font-weight: 800; font-family: var(--font-heading);">1.24s</div>
+              <div style="color: var(--claude-orange); font-size: 12px; margin-top: 4px;">Claude 3.7 Sonnet API</div>
+            </div>
+          </div>
+
+          <div class="table-section">
+            <table class="data-table">
+              <thead>
+                <tr><th>Workflow Name</th><th>Status</th><th>Nodes</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="font-weight: 700;">Customer Support & Refund Agent</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Google Sheets → Claude 3.7 Agent → Gmail Approval</div>
+                  </td>
+                  <td><span style="background: var(--status-success-bg); color: var(--status-success); padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;">Active</span></td>
+                  <td>4 Nodes</td>
+                  <td><button class="btn btn-sm" onclick="switchView('editor')">Open Canvas</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CANVAS EDITOR -->
+      <div id="view-editor" class="view-tab">
+        <div style="height: 48px; border-bottom: 1px solid var(--border-color); background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between; padding: 0 18px;">
+          <div style="font-weight: 700; font-size: 15px; font-family: var(--font-heading);">Customer Support & Refund Agent Pipeline</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm" onclick="openNodePicker()"><i data-lucide="plus" style="width: 14px;"></i> Add Node</button>
+            <button class="btn btn-sm btn-primary" onclick="triggerWorkflowExecution()"><i data-lucide="play" style="width: 14px;"></i> Execute Workflow</button>
+          </div>
+        </div>
+
+        <div class="canvas-area" id="canvasArea">
+          <svg class="connections-svg">
+            <path d="M 280 200 C 340 200, 340 200, 400 200" class="wire-path" id="wire1" />
+            <path d="M 640 200 C 700 200, 700 200, 760 200" class="wire-path" id="wire2" />
+          </svg>
+
+          <!-- Nodes -->
+          <div class="node-element" id="node-1" style="top: 140px; left: 40px;" onclick="selectNode('node-1')">
+            <div class="node-header">
+              <div class="node-icon" style="background: var(--cat-trigger);"><i data-lucide="sheet" style="width: 16px;"></i></div>
+              <div style="font-weight: 700;">Form Submission</div>
+            </div>
+            <div class="node-body">Event: <b>Row Added</b></div>
+            <div class="port-handle port-right"></div>
+          </div>
+
+          <div class="node-element selected" id="node-2" style="top: 140px; left: 400px;" onclick="selectNode('node-2')">
+            <div class="node-header">
+              <div class="node-icon" style="background: var(--claude-orange);"><i data-lucide="bot" style="width: 16px;"></i></div>
+              <div style="font-weight: 700;">AI Support Agent</div>
+            </div>
+            <div class="node-body">Mode: <b>Refund & Verification</b></div>
+            <div class="port-handle port-left"></div>
+            <div class="port-handle port-right"></div>
+          </div>
+
+          <div class="node-element" id="node-4" style="top: 140px; left: 760px;" onclick="selectNode('node-4')">
+            <div class="node-header">
+              <div class="node-icon" style="background: var(--cat-tool);"><i data-lucide="mail" style="width: 16px;"></i></div>
+              <div style="font-weight: 700;">Send Gmail</div>
+            </div>
+            <div class="node-body">To: <b>{{ $json.email }}</b></div>
+            <div class="port-handle port-left"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXECUTIONS -->
+      <div id="view-executions" class="view-tab">
+        <div class="executions-layout">
+          <div class="executions-list-panel">
+            <div style="padding: 12px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 13px;">Execution Session History</div>
+            <div id="executionsList"></div>
+          </div>
+          <div style="flex: 1; padding: 24px; overflow-y: auto;" id="execTraceContent">
+            <h2>Execution Details</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Click an execution from the left side list.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- NODE PICKER MODAL -->
+  <div class="modal-backdrop" id="nodePickerModal">
+    <div class="node-picker-modal">
+      <div class="picker-search-header">
+        <div class="picker-search-box">
+          <i data-lucide="search" style="width: 18px; color: var(--text-light);"></i>
+          <input type="text" placeholder="Search node by name..." id="pickerInput">
+        </div>
+      </div>
+      <div style="padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="btn" onclick="addNode('Claude 3.7 Agent')"><i data-lucide="bot" style="color: var(--claude-orange);"></i> Claude 3.7 Agent</div>
+        <div class="btn" onclick="addNode('Google Sheets Trigger')"><i data-lucide="sheet" style="color: var(--cat-trigger);"></i> Google Sheets Trigger</div>
+        <div class="btn" onclick="addNode('Gmail Send')"><i data-lucide="mail" style="color: var(--cat-tool);"></i> Gmail Send</div>
+        <div class="btn" onclick="addNode('Slack Alert')"><i data-lucide="message-square" style="color: var(--cat-action);"></i> Slack Alert</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSPECTOR DRAWER -->
+  <div class="inspector-drawer" id="nodeInspectorDrawer">
+    <div class="drawer-header">
+      <div style="font-weight: 700; font-size: 15px;">AI Support Agent Configuration</div>
+      <button class="btn btn-sm" onclick="closeInspector()"><i data-lucide="x" style="width: 15px;"></i> Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-col-input">
+        <div style="font-weight: 700; font-size: 11px; color: var(--text-light); margin-bottom: 8px;">INPUT SCHEMA</div>
+        <div class="code-block">{ "order_id": "4821", "customer": "Alex Morgan", "requested_refund": 1499 }</div>
+      </div>
+      <div class="drawer-col-main">
+        <div class="form-group">
+          <label class="form-label">Prompt System Instructions</label>
+          <textarea class="form-control">You are a professional Client Success representative. Verify damage and initiate refund if amount <= 2000 INR.</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model Selection</label>
+          <select class="form-control">
+            <option>Claude 3.7 Sonnet (Recommended)</option>
+            <option>Claude 3.5 Haiku</option>
+          </select>
+        </div>
+      </div>
+      <div class="drawer-col-output">
+        <div style="font-weight: 700; font-size: 11px; color: var(--text-light); margin-bottom: 8px;">OUTPUT RESPONSE</div>
+        <div class="code-block">{ "status": "APPROVED", "refund_amount": 1499, "ref": "RF-2291" }</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const state = {
+      executions: [
+        { id: '#159', time: '20:17:29', duration: '1.24s', status: 'Succeeded' },
+        { id: '#158', time: '20:16:46', duration: '1.85s', status: 'Succeeded' },
+        { id: '#157', time: '20:02:08', duration: '3.12s', status: 'Error' }
+      ]
+    };
+
+    function switchView(viewName) {
+      document.querySelectorAll('.view-tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(`view-${viewName}`).classList.add('active');
+      const nav = document.querySelector(`.nav-tab[data-view="${viewName}"]`);
+      if (nav) nav.classList.add('active');
+      if (viewName === 'executions') renderExecutions();
+    }
+
+    function selectNode(id) {
+      document.querySelectorAll('.node-element').forEach(el => el.classList.remove('selected'));
+      document.getElementById(id).classList.add('selected');
+      document.getElementById('nodeInspectorDrawer').classList.add('active');
+    }
+
+    function closeInspector() {
+      document.getElementById('nodeInspectorDrawer').classList.remove('active');
+    }
+
+    function openNodePicker() {
+      document.getElementById('nodePickerModal').classList.add('active');
+    }
+
+    document.getElementById('nodePickerModal').onclick = function(e) {
+      if (e.target === this) this.classList.remove('active');
+    };
+
+    function addNode(name) {
+      document.getElementById('nodePickerModal').classList.remove('active');
+      alert(`Added ${name} to canvas`);
+    }
+
+    function triggerWorkflowExecution() {
+      switchView('editor');
+      const w1 = document.getElementById('wire1');
+      const w2 = document.getElementById('wire2');
+      const n1 = document.getElementById('node-1');
+      const n2 = document.getElementById('node-2');
+      const n4 = document.getElementById('node-4');
+
+      n1.classList.add('running'); w1.classList.add('active-wire');
+
+      setTimeout(() => {
+        n1.classList.remove('running'); n1.classList.add('completed');
+        n2.classList.add('running'); w2.classList.add('active-wire');
+      }, 1000);
+
+      setTimeout(() => {
+        n2.classList.remove('running'); n2.classList.add('completed');
+        n4.classList.add('running');
+      }, 2000);
+
+      setTimeout(() => {
+        n4.classList.remove('running'); n4.classList.add('completed');
+        w1.classList.remove('active-wire'); w2.classList.remove('active-wire');
+
+        state.executions.unshift({
+          id: `#${Math.floor(160 + Math.random()*100)}`,
+          time: new Date().toLocaleTimeString(),
+          duration: '1.18s',
+          status: 'Succeeded'
+        });
+        alert('Execution finished! Session log updated.');
+      }, 3000);
+    }
+
+    function renderExecutions() {
+      const container = document.getElementById('executionsList');
+      container.innerHTML = state.executions.map((x, i) => `
+        <div class="execution-item ${i === 0 ? 'active' : ''}" onclick="selectExec(${i})">
+          <div style="font-weight: 700;">${x.time}</div>
+          <div style="font-size: 12px; color: var(--text-muted);">${x.status} • ${x.duration} • ${x.id}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectExec(i) {
+      const x = state.executions[i];
+      document.getElementById('execTraceContent').innerHTML = `
+        <h3>Execution Details ${x.id}</h3>
+        <p style="color: var(--text-muted); font-size: 13px;">Time: ${x.time} | Duration: ${x.duration} | Status: ${x.status}</p>
+        <div style="margin-top: 16px;" class="code-block">{ "node_1": "Google Sheets Trigger OK", "node_2": "Claude 3.7 Output: Refund RF-2291", "node_3": "Gmail Sent OK" }</div>
+      `;
+    }
+  </script>
+</body>
+</html>
