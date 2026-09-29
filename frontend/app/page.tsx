@@ -123,8 +123,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex flex-col font-sans text-[#2B2826]">
-      {/* Top Application Navbar is shown on all screens EXCEPT the 1st landing screen */}
+    <div className="min-h-screen bg-[#FAF8F5] flex flex-col md:flex-row font-sans text-[#2B2826]">
+      {/* Left Application Sidebar (shown on all screens EXCEPT the 1st landing screen) */}
       {activeTab !== 'landing' && (
         <Navbar
           activeTab={activeTab}
@@ -136,7 +136,7 @@ export default function Home() {
       )}
 
       {/* Main App View Routing */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full overflow-y-auto">
         {/* 1st Screen: About Project Overview */}
         {activeTab === 'landing' && (
           <LandingPage 

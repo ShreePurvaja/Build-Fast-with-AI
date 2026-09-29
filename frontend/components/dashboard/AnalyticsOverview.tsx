@@ -25,7 +25,8 @@ import {
   ListFilter,
   ToggleLeft,
   ToggleRight,
-  FileText
+  FileText,
+  Info
 } from 'lucide-react';
 import { ModelSelectorDropdown, CATALOG_MODELS, ModelDetail } from '../ui/ModelSelectorDropdown';
 
@@ -39,18 +40,11 @@ export const AnalyticsOverview: React.FC = () => {
   // Filters & Controls (Screenshot 2)
   const [selectedProject, setSelectedProject] = useState('Default Project');
   const [timeRange, setTimeRange] = useState('Last 30 minutes');
-  const [selectedModelFilter, setSelectedModelFilter] = useState('Show all Models');
-  const [selectedKeyFilter, setSelectedKeyFilter] = useState('Show all API Keys');
   const [showLimits, setShowLimits] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Selected Model for Model Dropdown Selector
+  // Selected Model for Model Dropdown Selector (Moved to Top Controls Bar - Item 3)
   const [selectedModel, setSelectedModel] = useState<ModelDetail>(CATALOG_MODELS[0]);
-
-  // NVIDIA API Key state
-  const [nvidiaApiKey, setNvidiaApiKey] = useState('');
-  const [nvidiaStatus, setNvidiaStatus] = useState<'idle' | 'testing' | 'active' | 'error'>('active');
-  const [nvidiaMsg, setNvidiaMsg] = useState<string | null>("Loaded real NVIDIA NIM models from backend .env!");
 
   // Daily Cost Data (Screenshot 1)
   const [dailyCostData, setDailyCostData] = useState([
@@ -91,11 +85,11 @@ export const AnalyticsOverview: React.FC = () => {
         
         {/* Workspace Brand */}
         <div className="pb-4 border-b border-[#E6E1D7]">
-          <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#9B9488]">Workspace</div>
+          <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#9B9488]">Telemetry View</div>
           <div className="font-extrabold text-sm text-[#2B2826] mt-0.5 flex items-center justify-between">
-            <span>AI Workforce</span>
+            <span>Model Dashboard</span>
             <span className="bg-[#FDF3E9] text-[#D97757] text-[10px] font-bold px-2 py-0.5 rounded border border-[#E6E1D7]">
-              SaaS
+              Live
             </span>
           </div>
         </div>
@@ -151,21 +145,12 @@ export const AnalyticsOverview: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Model Selector Showcase (Screenshot 3) */}
-        <div className="pt-4 border-t border-[#E6E1D7] space-y-2">
-          <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#9B9488]">Quick Model Selector</div>
-          <ModelSelectorDropdown
-            selectedModelId={selectedModel.id}
-            onSelectModel={(model) => setSelectedModel(model)}
-          />
-        </div>
-
       </div>
 
       {/* MAIN DASHBOARD CONTENT AREA */}
       <div className="flex-1 space-y-6 overflow-hidden">
         
-        {/* TOP CONTROLS & FILTER BAR (SCREENSHOTS 1 & 2) */}
+        {/* TOP CONTROLS & FILTER BAR WITH INTEGRATED RICH MODEL SELECTOR (ITEMS 3, 4, 5) */}
         <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs flex flex-wrap items-center justify-between gap-3">
           
           {/* Project Selector & Date */}
@@ -173,7 +158,7 @@ export const AnalyticsOverview: React.FC = () => {
             <select
               value={selectedProject}
               onChange={e => setSelectedProject(e.target.value)}
-              className="bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2B2826] focus:outline-none focus:border-[#D97757]"
+              className="bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl px-3 py-2 text-xs font-bold text-[#2B2826] focus:outline-none focus:border-[#D97757]"
             >
               <option>Default Project</option>
               <option>Customer Support & Refund</option>
@@ -182,19 +167,19 @@ export const AnalyticsOverview: React.FC = () => {
 
             <span className="text-xs text-[#9B9488] font-mono">•</span>
 
-            <span className="bg-[#FAF8F5] border border-[#E6E1D7] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#6E685E] flex items-center gap-1.5">
+            <span className="bg-[#FAF8F5] border border-[#E6E1D7] px-3 py-2 rounded-xl text-xs font-semibold text-[#6E685E] flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#D97757]" />
               <span>September 2026</span>
             </span>
           </div>
 
-          {/* Action Filters (Screenshot 2) */}
-          <div className="flex items-center space-x-2">
+          {/* Action Filters & Integrated Rich Model Dropdown */}
+          <div className="flex items-center space-x-2 flex-wrap gap-y-2">
             
             {/* Show Limits Toggle Switch */}
             <button
               onClick={() => setShowLimits(!showLimits)}
-              className="flex items-center space-x-1.5 bg-[#FAF8F5] border border-[#E6E1D7] px-3 py-1.5 rounded-xl text-xs font-bold text-[#2B2826] hover:border-[#D97757] transition-all"
+              className="flex items-center space-x-1.5 bg-[#FAF8F5] border border-[#E6E1D7] px-3 py-2 rounded-xl text-xs font-bold text-[#2B2826] hover:border-[#D97757] transition-all"
             >
               <span>Show Limits</span>
               {showLimits ? <ToggleRight className="w-5 h-5 text-[#0F766E]" /> : <ToggleLeft className="w-5 h-5 text-[#9B9488]" />}
@@ -203,7 +188,7 @@ export const AnalyticsOverview: React.FC = () => {
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
-              className="bg-[#FAF8F5] border border-[#E6E1D7] hover:border-[#D97757] p-1.5 rounded-xl text-xs text-[#2B2826] transition-all"
+              className="bg-[#FAF8F5] border border-[#E6E1D7] hover:border-[#D97757] p-2 rounded-xl text-xs text-[#2B2826] transition-all"
               title="Refresh Dashboard Data"
             >
               <RefreshCw className={`w-4 h-4 text-[#D97757] ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -213,7 +198,7 @@ export const AnalyticsOverview: React.FC = () => {
             <select
               value={timeRange}
               onChange={e => setTimeRange(e.target.value)}
-              className="bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#2B2826] focus:outline-none focus:border-[#D97757]"
+              className="bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl px-3 py-2 text-xs font-semibold text-[#2B2826] focus:outline-none focus:border-[#D97757]"
             >
               <option>Last 30 minutes</option>
               <option>Last 24 hours</option>
@@ -221,18 +206,13 @@ export const AnalyticsOverview: React.FC = () => {
               <option>September 2026</option>
             </select>
 
-            {/* Model Filter */}
-            <select
-              value={selectedModelFilter}
-              onChange={e => setSelectedModelFilter(e.target.value)}
-              className="bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#2B2826] focus:outline-none focus:border-[#D97757]"
-            >
-              <option>Show all Models</option>
-              <option>meta/llama-3.1-70b-instruct</option>
-              <option>claude-3-7-sonnet</option>
-              <option>groq/llama3-70b</option>
-              <option>sarvam-indic-stt</option>
-            </select>
+            {/* RICH MODEL SELECTOR DROPDOWN AT TOP (ITEM 3 & 4) */}
+            <div className="w-64">
+              <ModelSelectorDropdown
+                selectedModelId={selectedModel.id}
+                onSelectModel={(model) => setSelectedModel(model)}
+              />
+            </div>
 
           </div>
 
@@ -270,7 +250,7 @@ export const AnalyticsOverview: React.FC = () => {
               </div>
             </div>
 
-            {/* Model Usage Bar/Line Chart Card (Screenshot 1) */}
+            {/* Model Usage Bar Chart Card (Screenshot 1) */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-4">
               
               {/* Active Model Name & Value */}
@@ -283,7 +263,7 @@ export const AnalyticsOverview: React.FC = () => {
                 </div>
               </div>
 
-              {/* BAR CHART GRAPH WITH HOVER TOOLTIP (SCREENSHOT 1 RECREATION) */}
+              {/* BAR CHART GRAPH WITH HOVER TOOLTIP (CLAUDE LIGHT THEME - ITEM 4 & 5) */}
               <div className="relative h-56 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] p-6 flex items-end justify-between gap-2 overflow-visible">
                 
                 {/* Y-Axis Cost Markers */}
@@ -315,7 +295,7 @@ export const AnalyticsOverview: React.FC = () => {
                         <div
                           className={`w-full max-w-[28px] rounded-t-lg transition-all duration-300 ${
                             isSpike 
-                              ? 'bg-slate-300 group-hover:bg-[#2B2826]' 
+                              ? 'bg-[#2B2826] group-hover:bg-[#D97757]' 
                               : item.cost > 0 
                               ? 'bg-[#10B981] group-hover:bg-[#059669]' 
                               : 'bg-[#10B981]/50 group-hover:bg-[#10B981]'
@@ -323,10 +303,10 @@ export const AnalyticsOverview: React.FC = () => {
                           style={{ height: `${heightPercent}%` }}
                         />
 
-                        {/* Interactive Tooltip Card (Groq Style - Screenshot 1) */}
+                        {/* Interactive Tooltip Card (Claude Light Theme - ITEM 4 & 5) */}
                         {hoveredBar?.date === item.date && (
-                          <div className="absolute -top-14 z-30 bg-[#1A1A1A] text-white p-2.5 rounded-xl border border-slate-800 shadow-xl text-[11px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                            <div className="font-bold text-slate-400 text-[10px] mb-1">{item.date}</div>
+                          <div className="absolute -top-14 z-30 bg-white text-[#2B2826] p-2.5 rounded-xl border border-[#E6E1D7] shadow-xl text-[11px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                            <div className="font-bold text-[#6E685E] text-[10px] mb-1">{item.date}</div>
                             <div className="flex items-center space-x-2 font-mono">
                               <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
                               <span>Cost: <b>${item.cost.toFixed(2)}</b> ({item.requests} req)</span>
@@ -363,7 +343,7 @@ export const AnalyticsOverview: React.FC = () => {
               </p>
             </div>
 
-            {/* HTTP Status Codes Timeline Graph Card (Screenshot 2) */}
+            {/* HTTP Status Codes Timeline Graph Card (Screenshot 2 & Fixes Info Reference Error - ITEM 2) */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold text-sm text-[#2B2826] flex items-center gap-2">

@@ -307,77 +307,77 @@ export const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
             </div>
           </div>
 
-          {/* HOVER POPOVER CARD (GROQ STYLE - SCREENSHOT 3) */}
+          {/* HOVER POPOVER CARD (CLAUDE LIGHT THEME - REQUIREMENTS 4 & 5) */}
           {hoveredModel && (
-            <div className="w-80 bg-[#1A1A1A] text-white border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in slide-in-from-left-2 duration-150">
+            <div className="w-80 bg-white text-[#2B2826] border border-[#E6E1D7] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in slide-in-from-left-2 duration-150 z-50">
               
               {/* Model Header */}
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#76B900] bg-[#76B900]/15 px-2 py-0.5 rounded border border-[#76B900]/30">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0F766E] bg-[#E6F4F1] px-2 py-0.5 rounded border border-[#99F6E4]">
                     {hoveredModel.provider}
                   </span>
                   <button 
                     onClick={(e) => handleCopyId(hoveredModel.id, e)}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-[#9B9488] hover:text-[#D97757] transition-colors"
                     title="Copy Model ID"
                   >
-                    {copiedId ? <CheckCircle2 className="w-4 h-4 text-[#76B900]" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedId ? <CheckCircle2 className="w-4 h-4 text-[#0F766E]" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
 
-                <h4 className="font-extrabold text-sm text-white mt-2 leading-tight">
+                <h4 className="font-extrabold text-sm text-[#2B2826] mt-2 leading-tight">
                   {hoveredModel.name}
                 </h4>
-                <div className="text-[10.5px] font-mono text-slate-400 truncate mt-0.5">
+                <div className="text-[10.5px] font-mono text-[#6E685E] truncate mt-0.5">
                   {hoveredModel.id}
                 </div>
               </div>
 
               {/* LIMITS Section */}
-              <div className="border-t border-slate-800 pt-3">
-                <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-2">
+              <div className="border-t border-[#E6E1D7] pt-3">
+                <div className="text-[10px] font-extrabold text-[#9B9488] uppercase tracking-wider mb-2">
                   LIMITS & RATE QUOTAS
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-[11px] text-slate-400 block">Requests</span>
-                    <span className="font-bold text-white block mt-0.5">{hoveredModel.requests_per_min}</span>
-                    <span className="text-[10px] text-slate-500">{hoveredModel.requests_per_day}</span>
+                    <span className="text-[11px] text-[#6E685E] block">Requests</span>
+                    <span className="font-bold text-[#2B2826] block mt-0.5">{hoveredModel.requests_per_min}</span>
+                    <span className="text-[10px] text-[#9B9488]">{hoveredModel.requests_per_day}</span>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-400 block">Tokens</span>
-                    <span className="font-bold text-white block mt-0.5">{hoveredModel.tokens_per_min}</span>
-                    <span className="text-[10px] text-slate-500">{hoveredModel.tokens_per_day}</span>
+                    <span className="text-[11px] text-[#6E685E] block">Tokens</span>
+                    <span className="font-bold text-[#0F766E] block mt-0.5">{hoveredModel.tokens_per_min}</span>
+                    <span className="text-[10px] text-[#9B9488]">{hoveredModel.tokens_per_day}</span>
                   </div>
                 </div>
               </div>
 
               {/* RELEASE STAGE Section */}
-              <div className="border-t border-slate-800 pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="border-t border-[#E6E1D7] pt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                  <span className="text-[10px] font-extrabold text-[#9B9488] uppercase tracking-wider block">
                     RELEASE STAGE
                   </span>
-                  <span className="font-semibold text-slate-200 block mt-1">
+                  <span className="font-semibold text-[#2B2826] block mt-1">
                     {hoveredModel.release_stage}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                  <span className="text-[10px] font-extrabold text-[#9B9488] uppercase tracking-wider block">
                     RELEASED
                   </span>
-                  <span className="font-semibold text-slate-300 block mt-1">
+                  <span className="font-semibold text-[#6E685E] block mt-1">
                     {hoveredModel.release_date}
                   </span>
                 </div>
               </div>
 
               {/* Description */}
-              <div className="border-t border-slate-800 pt-3 text-[11px] text-slate-400 leading-relaxed">
+              <div className="border-t border-[#E6E1D7] pt-3 text-[11px] text-[#6E685E] leading-relaxed">
                 {hoveredModel.description}
               </div>
 
