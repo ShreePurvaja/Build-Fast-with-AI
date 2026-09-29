@@ -45,6 +45,7 @@ import {
   Lock,
   UserCheck
 } from 'lucide-react';
+import { ModelSelectorDropdown } from './ui/ModelSelectorDropdown';
 
 interface NodeData {
   id: string;
@@ -904,36 +905,19 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onRunFinished, o
               {/* CENTER COLUMN: NODE SETUP & NEAT MODEL SELECTION (6 Cols) */}
               <div className="md:col-span-6 p-6 overflow-y-auto space-y-5 bg-white">
                 
-                {/* Neat Model Selection Dropdown (Item 9) */}
+                {/* Neat Model Selection Dropdown (Item 9 & Screenshot 3) */}
                 <div>
                   <label className="text-xs font-bold text-[#2B2826] block mb-1.5 flex items-center justify-between">
                     <span>Model Architecture Selection</span>
-                    <span className="text-[11px] text-[#76B900] font-mono">Real NVIDIA NIM API Loaded</span>
+                    <span className="text-[11px] text-[#76B900] font-mono">Real NVIDIA NIM API Loaded (.env)</span>
                   </label>
 
-                  <div className="relative">
-                    <select 
-                      value={targetNode.model || 'meta/llama-3.1-70b-instruct'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNodes(prev => prev.map(n => n.id === targetNode.id ? { ...n, model: val } : n));
-                      }}
-                      className="w-full p-3 border border-[#E6E1D7] rounded-xl text-xs font-bold bg-[#FAF8F5] focus:outline-none focus:border-[#D97757] appearance-none cursor-pointer pr-10"
-                    >
-                      <optgroup label="NVIDIA NIM Foundation Models (.env Loaded)">
-                        {nvidiaModels.map(m => (
-                          <option key={m.id} value={m.id}>
-                            🟢 {m.name} ({m.provider})
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Anthropic Claude Models">
-                        <option value="claude-3-7-sonnet">🟠 Claude 3.7 Sonnet (Anthropic)</option>
-                        <option value="claude-3-5-haiku">🟠 Claude 3.5 Haiku (Fast)</option>
-                      </optgroup>
-                    </select>
-                    <ChevronDown className="w-4 h-4 absolute right-3 top-3.5 text-[#9B9488] pointer-events-none" />
-                  </div>
+                  <ModelSelectorDropdown
+                    selectedModelId={targetNode.model || 'meta/llama-3.1-70b-instruct'}
+                    onSelectModel={(selected) => {
+                      setNodes(prev => prev.map(n => n.id === targetNode.id ? { ...n, model: selected.id } : n));
+                    }}
+                  />
                 </div>
 
                 {/* System Prompt / Node Instructions */}
