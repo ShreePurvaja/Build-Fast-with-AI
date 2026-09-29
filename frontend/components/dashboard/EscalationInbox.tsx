@@ -168,15 +168,19 @@ export const EscalationInbox: React.FC = () => {
               {/* Preserved Conversation Transcript */}
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Preserved Conversation Transcript ({selectedItem.transcript.length} turns)
+                  Preserved Conversation Transcript ({selectedItem.transcript?.length || 0} turns)
                 </h4>
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-xs">
-                  {selectedItem.transcript.map((t, idx) => (
-                    <div key={idx} className="p-2 bg-white rounded-lg border border-slate-200">
-                      <strong className="text-[#0e6b6b]">{t.speaker}:</strong>{' '}
-                      <span className="text-slate-800">{t.text}</span>
-                    </div>
-                  ))}
+                  {selectedItem.transcript && selectedItem.transcript.length > 0 ? (
+                    selectedItem.transcript.map((t, idx) => (
+                      <div key={idx} className="p-2 bg-white rounded-lg border border-slate-200">
+                        <strong className="text-[#0e6b6b]">{t.speaker}:</strong>{' '}
+                        <span className="text-slate-800">{t.text}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-slate-400 italic">No conversation transcript recorded for this handoff.</div>
+                  )}
                 </div>
               </div>
 

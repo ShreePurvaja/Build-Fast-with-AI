@@ -173,12 +173,14 @@ interface ModelSelectorDropdownProps {
   selectedModelId: string;
   onSelectModel: (model: ModelDetail) => void;
   customModels?: ModelDetail[];
+  showHoverDetails?: boolean;
 }
 
 export const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
   selectedModelId,
   onSelectModel,
-  customModels
+  customModels,
+  showHoverDetails = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,12 +244,12 @@ export const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
         <ChevronDown className={`w-4 h-4 text-[#9B9488] transition-transform ${isOpen ? 'rotate-180 text-[#D97757]' : ''}`} />
       </button>
 
-      {/* DROPDOWN & HOVER POPOVER CARD CONTAINER */}
+      {/* DROPDOWN & HOVER POPOVER CARD CONTAINER (Positioned to fit full screen) */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 z-50 flex items-start space-x-2 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-full right-0 mt-2 z-50 flex flex-col sm:flex-row-reverse items-start space-y-2 sm:space-y-0 space-x-0 sm:space-x-3 sm:space-x-reverse animate-in fade-in zoom-in-95 duration-150">
           
           {/* Main List Panel */}
-          <div className="w-80 bg-white border border-[#E6E1D7] rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[460px]">
+          <div className="w-80 bg-white border border-[#E6E1D7] rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[460px] shrink-0">
             
             {/* Search Bar */}
             <div className="p-3 bg-[#F4F1EA] border-b border-[#E6E1D7] relative">
@@ -307,19 +309,19 @@ export const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
             </div>
           </div>
 
-          {/* HOVER POPOVER CARD (CLAUDE LIGHT THEME - REQUIREMENTS 4 & 5) */}
-          {hoveredModel && (
-            <div className="w-80 bg-white text-[#2B2826] border border-[#E6E1D7] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in slide-in-from-left-2 duration-150 z-50">
+          {/* HOVER POPOVER DETAIL CARD (CLAUDE LIGHT THEME) */}
+          {showHoverDetails && hoveredModel && (
+            <div className="w-80 bg-white text-[#2B2826] border border-[#E6E1D7] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in slide-in-from-left-2 duration-150 shrink-0 z-50">
               
               {/* Model Header */}
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0F766E] bg-[#E6F4F1] px-2 py-0.5 rounded border border-[#99F6E4]">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0F766E] bg-[#E6F4F1] px-2 py-0.5 rounded-md border border-[#99F6E4]">
                     {hoveredModel.provider}
                   </span>
                   <button 
                     onClick={(e) => handleCopyId(hoveredModel.id, e)}
-                    className="text-[#9B9488] hover:text-[#D97757] transition-colors"
+                    className="text-[#9B9488] hover:text-[#D97757] transition-colors p-1"
                     title="Copy Model ID"
                   >
                     {copiedId ? <CheckCircle2 className="w-4 h-4 text-[#0F766E]" /> : <Copy className="w-3.5 h-3.5" />}

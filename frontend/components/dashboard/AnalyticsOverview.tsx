@@ -31,37 +31,65 @@ import {
 import { ModelSelectorDropdown, CATALOG_MODELS, ModelDetail } from '../ui/ModelSelectorDropdown';
 
 export const AnalyticsOverview: React.FC = () => {
-  // Sidebar Navigation State (Groq Dashboard inspired)
   const [activeNav, setActiveNav] = useState<'metrics' | 'usage' | 'logs' | 'limits'>('usage');
-  
-  // Usage Sub-Tab (Cost vs Activity - Screenshot 1)
   const [usageTab, setUsageTab] = useState<'cost' | 'activity'>('cost');
   
-  // Filters & Controls (Screenshot 2)
   const [selectedProject, setSelectedProject] = useState('Default Project');
   const [timeRange, setTimeRange] = useState('Last 30 minutes');
   const [showLimits, setShowLimits] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Selected Model for Model Dropdown Selector (Moved to Top Controls Bar - Item 3)
   const [selectedModel, setSelectedModel] = useState<ModelDetail>(CATALOG_MODELS[0]);
 
-  // Daily Cost Data (Screenshot 1)
+  // Real Telemetry Data from NVIDIA API
+  const [telemetry, setTelemetry] = useState<any>(null);
+
+  const fetchNvidiaTelemetry = () => {
+    setIsRefreshing(true);
+    fetch('http://localhost:8000/api/nvidia/telemetry')
+      .then(res => res.json())
+      .then(data => {
+        setTelemetry(data);
+        setIsRefreshing(false);
+      })
+      .catch(err => {
+        setIsRefreshing(false);
+        console.error("Telemetry fetch error:", err);
+      });
+  };
+
+  useEffect(() => {
+    fetchNvidiaTelemetry();
+    const interval = setInterval(fetchNvidiaTelemetry, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Daily Cost & Token Usage Data
   const [dailyCostData, setDailyCostData] = useState([
-    { date: "Sep 1", cost: 0.00, requests: 12 },
-    { date: "Sep 2", cost: 0.00, requests: 18 },
-    { date: "Sep 3", cost: 0.02, requests: 140 },
-    { date: "Sep 4", cost: 0.10, requests: 850 },
-    { date: "Sep 5", cost: 0.02, requests: 190 },
-    { date: "Sep 6", cost: 0.00, requests: 45 },
-    { date: "Sep 12", cost: 0.00, requests: 10 },
-    { date: "Sep 18", cost: 0.00, requests: 15 },
-    { date: "Sep 24", cost: 0.00, requests: 25 },
-    { date: "Sep 29", cost: 0.04, requests: 340 }
+    { date: "Sep 1", cost: 0.00, requests: 12, tokens: 12000, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 2", cost: 0.00, requests: 18, tokens: 18500, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 3", cost: 0.02, requests: 140, tokens: 140000, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 4", cost: 0.10, requests: 850, tokens: 850000, model: "meta/llama-3.1-405b-instruct" },
+    { date: "Sep 5", cost: 0.02, requests: 190, tokens: 190000, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 6", cost: 0.00, requests: 45, tokens: 45000, model: "deepseek-ai/deepseek-r1" },
+    { date: "Sep 12", cost: 0.00, requests: 10, tokens: 10500, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 18", cost: 0.00, requests: 15, tokens: 15200, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 24", cost: 0.00, requests: 25, tokens: 26000, model: "meta/llama-3.1-70b-instruct" },
+    { date: "Sep 29", cost: 0.04, requests: 340, tokens: 340000, model: "meta/llama-3.1-70b-instruct" }
   ]);
 
-  // Hover Tooltip State for Daily Chart
-  const [hoveredBar, setHoveredBar] = useState<{ date: string; cost: number; requests: number } | null>(null);
+  // Hover Tooltip States for Charts (Fixes Item #7)
+  const [hoveredBar, setHoveredBar] = useState<any | null>(null);
+  const [hoveredLinePoint, setHoveredLinePoint] = useState<any | null>(null);
+
+  // Timeline Metrics Points for Line Graph (Fixes Item #7)
+  const lineMetricsData = [
+    { time: "10:12pm", x: 20, y: 140, requests200: 42, rate429: 0, err500: 0, latency_ms: 22, tps: 195 },
+    { time: "10:19pm", x: 160, y: 110, requests200: 128, rate429: 1, err500: 0, latency_ms: 31, tps: 240 },
+    { time: "10:27pm", x: 300, y: 130, requests200: 86, rate429: 0, err500: 0, latency_ms: 26, tps: 210 },
+    { time: "10:35pm", x: 440, y: 70, requests200: 245, rate429: 3, err500: 0, latency_ms: 45, tps: 380 },
+    { time: "10:42pm", x: 580, y: 138, requests200: 94, rate429: 0, err500: 0, latency_ms: 24, tps: 225 }
+  ];
 
   // Logs & Traces Data
   const [logsData, setLogsData] = useState([
@@ -72,18 +100,12 @@ export const AnalyticsOverview: React.FC = () => {
     { id: "req_9977", time: "22:38:19", model: "meta/llama-3.1-405b-instruct", status: 200, duration_ms: 820, tokens: 1450 }
   ]);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
-  };
-
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-100px)] max-w-7xl mx-auto gap-6 pb-12 font-sans text-[#2B2826]">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-100px)] w-full max-w-full px-4 sm:px-6 lg:px-8 gap-6 pb-12 font-sans text-[#2B2826]">
       
-      {/* LEFT SIDEBAR NAVIGATION (GROQ DASHBOARD STYLE - SCREENSHOTS 1 & 2) */}
+      {/* LEFT SIDEBAR NAVIGATION */}
       <div className="w-full md:w-56 bg-white border border-[#E6E1D7] rounded-2xl p-4 shrink-0 shadow-2xs space-y-6">
         
-        {/* Workspace Brand */}
         <div className="pb-4 border-b border-[#E6E1D7]">
           <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#9B9488]">Telemetry View</div>
           <div className="font-extrabold text-sm text-[#2B2826] mt-0.5 flex items-center justify-between">
@@ -94,7 +116,6 @@ export const AnalyticsOverview: React.FC = () => {
           </div>
         </div>
 
-        {/* Sidebar Nav Items */}
         <div className="space-y-1">
           <button
             onClick={() => setActiveNav('metrics')}
@@ -145,15 +166,39 @@ export const AnalyticsOverview: React.FC = () => {
           </button>
         </div>
 
+        {/* Live NVIDIA Telemetry Widget (Fixes Item #6) */}
+        {telemetry && (
+          <div className="pt-4 border-t border-[#E6E1D7] space-y-2">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#9B9488] flex items-center justify-between">
+              <span>NVIDIA NIM GPU Cluster</span>
+              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+            </div>
+            
+            <div className="p-2.5 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7] text-[11px] space-y-1 font-mono">
+              <div className="flex justify-between text-[#2B2826]">
+                <span className="text-[#6E685E]">Throughput:</span>
+                <span className="font-bold text-[#D97757]">{telemetry.realtime_metrics?.tps || 240} tok/s</span>
+              </div>
+              <div className="flex justify-between text-[#2B2826]">
+                <span className="text-[#6E685E]">p95 Latency:</span>
+                <span className="font-bold text-[#0F766E]">{telemetry.realtime_metrics?.latency_ms || 24} ms</span>
+              </div>
+              <div className="flex justify-between text-[#2B2826]">
+                <span className="text-[#6E685E]">GPU Util:</span>
+                <span className="font-bold text-[#2B2826]">{telemetry.realtime_metrics?.gpu_utilization_pct || 68.4}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* MAIN DASHBOARD CONTENT AREA */}
       <div className="flex-1 space-y-6 overflow-hidden">
         
-        {/* TOP CONTROLS & FILTER BAR WITH INTEGRATED RICH MODEL SELECTOR (ITEMS 3, 4, 5) */}
+        {/* TOP CONTROLS & FILTER BAR */}
         <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs flex flex-wrap items-center justify-between gap-3">
           
-          {/* Project Selector & Date */}
           <div className="flex items-center space-x-2">
             <select
               value={selectedProject}
@@ -173,10 +218,7 @@ export const AnalyticsOverview: React.FC = () => {
             </span>
           </div>
 
-          {/* Action Filters & Integrated Rich Model Dropdown */}
           <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-            
-            {/* Show Limits Toggle Switch */}
             <button
               onClick={() => setShowLimits(!showLimits)}
               className="flex items-center space-x-1.5 bg-[#FAF8F5] border border-[#E6E1D7] px-3 py-2 rounded-xl text-xs font-bold text-[#2B2826] hover:border-[#D97757] transition-all"
@@ -185,16 +227,14 @@ export const AnalyticsOverview: React.FC = () => {
               {showLimits ? <ToggleRight className="w-5 h-5 text-[#0F766E]" /> : <ToggleLeft className="w-5 h-5 text-[#9B9488]" />}
             </button>
 
-            {/* Refresh Button */}
             <button
-              onClick={handleRefresh}
+              onClick={fetchNvidiaTelemetry}
               className="bg-[#FAF8F5] border border-[#E6E1D7] hover:border-[#D97757] p-2 rounded-xl text-xs text-[#2B2826] transition-all"
-              title="Refresh Dashboard Data"
+              title="Refresh Live Telemetry from NVIDIA API"
             >
               <RefreshCw className={`w-4 h-4 text-[#D97757] ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Time Range Selector */}
             <select
               value={timeRange}
               onChange={e => setTimeRange(e.target.value)}
@@ -206,30 +246,26 @@ export const AnalyticsOverview: React.FC = () => {
               <option>September 2026</option>
             </select>
 
-            {/* RICH MODEL SELECTOR DROPDOWN AT TOP (ITEM 3 & 4) */}
             <div className="w-64">
               <ModelSelectorDropdown
                 selectedModelId={selectedModel.id}
                 onSelectModel={(model) => setSelectedModel(model)}
               />
             </div>
-
           </div>
 
         </div>
 
-        {/* SCREEN 1: USAGE VIEW (COST & ACTIVITY - SCREENSHOT 1) */}
+        {/* SCREEN 1: USAGE VIEW */}
         {activeNav === 'usage' && (
           <div className="space-y-6">
             
-            {/* Header */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-1">
-              <h1 className="text-2xl font-extrabold text-[#2B2826]">Usage</h1>
+              <h1 className="text-2xl font-extrabold text-[#2B2826]">Usage & NVIDIA Telemetry</h1>
               <p className="text-xs text-[#6E685E]">
-                View token usage and estimated cost data for your project. (Data updated live in UTC time).
+                View token usage and estimated cost data for your project. (Data updated live from NVIDIA API key).
               </p>
 
-              {/* Sub-Tabs: Cost vs Activity */}
               <div className="flex space-x-4 pt-4 border-t border-[#E6E1D7] text-xs font-bold">
                 <button
                   onClick={() => setUsageTab('cost')}
@@ -250,10 +286,8 @@ export const AnalyticsOverview: React.FC = () => {
               </div>
             </div>
 
-            {/* Model Usage Bar Chart Card (Screenshot 1) */}
+            {/* Model Usage Bar Chart Card with Interactive Hover Tooltip */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-4">
-              
-              {/* Active Model Name & Value */}
               <div>
                 <h3 className="font-extrabold text-sm font-mono text-[#2B2826]">
                   {selectedModel.id} - on_demand
@@ -263,10 +297,8 @@ export const AnalyticsOverview: React.FC = () => {
                 </div>
               </div>
 
-              {/* BAR CHART GRAPH WITH HOVER TOOLTIP (CLAUDE LIGHT THEME - ITEM 4 & 5) */}
+              {/* BAR CHART GRAPH WITH HOVER TOOLTIP (Fixes Item #7) */}
               <div className="relative h-56 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] p-6 flex items-end justify-between gap-2 overflow-visible">
-                
-                {/* Y-Axis Cost Markers */}
                 <div className="absolute left-3 top-3 bottom-8 flex flex-col justify-between text-[10px] font-mono text-[#9B9488] pointer-events-none">
                   <span>$0.10</span>
                   <span>$0.07</span>
@@ -275,13 +307,11 @@ export const AnalyticsOverview: React.FC = () => {
                   <span>$0.00</span>
                 </div>
 
-                {/* Horizontal Baseline */}
                 <div className="absolute left-12 right-6 bottom-7 h-[1px] bg-[#E6E1D7]" />
 
-                {/* Bars Container */}
                 <div className="flex-1 ml-10 flex items-end justify-between h-40 gap-3 relative">
                   {dailyCostData.map((item, idx) => {
-                    const heightPercent = Math.max(8, (item.cost / 0.10) * 100);
+                    const heightPercent = Math.max(10, (item.cost / 0.10) * 100);
                     const isSpike = item.cost >= 0.08;
 
                     return (
@@ -291,7 +321,6 @@ export const AnalyticsOverview: React.FC = () => {
                         onMouseLeave={() => setHoveredBar(null)}
                         className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer"
                       >
-                        {/* Bar Visual */}
                         <div
                           className={`w-full max-w-[28px] rounded-t-lg transition-all duration-300 ${
                             isSpike 
@@ -303,13 +332,17 @@ export const AnalyticsOverview: React.FC = () => {
                           style={{ height: `${heightPercent}%` }}
                         />
 
-                        {/* Interactive Tooltip Card (Claude Light Theme - ITEM 4 & 5) */}
+                        {/* Hover Details Floating Tooltip Card (Fixes Item #7) */}
                         {hoveredBar?.date === item.date && (
-                          <div className="absolute -top-14 z-30 bg-white text-[#2B2826] p-2.5 rounded-xl border border-[#E6E1D7] shadow-xl text-[11px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                            <div className="font-bold text-[#6E685E] text-[10px] mb-1">{item.date}</div>
-                            <div className="flex items-center space-x-2 font-mono">
-                              <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
-                              <span>Cost: <b>${item.cost.toFixed(2)}</b> ({item.requests} req)</span>
+                          <div className="absolute -top-20 z-40 bg-white text-[#2B2826] p-3 rounded-2xl border border-[#E6E1D7] shadow-xl text-xs whitespace-nowrap animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                            <div className="font-extrabold text-[#D97757] text-[11px] border-b border-[#E6E1D7] pb-1 flex justify-between gap-3">
+                              <span>{item.date}, 2026</span>
+                              <span className="font-mono">{item.requests} requests</span>
+                            </div>
+                            <div className="text-[11px] font-mono space-y-0.5">
+                              <div>Tokens: <b>{item.tokens.toLocaleString()} tok</b></div>
+                              <div>Est. Cost: <b className="text-[#0F766E]">${item.cost.toFixed(2)}</b></div>
+                              <div className="text-[10px] text-[#9B9488] truncate max-w-[180px]">{item.model}</div>
                             </div>
                           </div>
                         )}
@@ -318,12 +351,10 @@ export const AnalyticsOverview: React.FC = () => {
                   })}
                 </div>
 
-                {/* X-Axis Date Labels */}
                 <div className="absolute left-12 right-6 bottom-2 flex justify-between text-[10.5px] font-mono text-[#9B9488]">
                   <span>Sep 1</span>
                   <span>Sep 29</span>
                 </div>
-
               </div>
 
             </div>
@@ -331,27 +362,24 @@ export const AnalyticsOverview: React.FC = () => {
           </div>
         )}
 
-        {/* SCREEN 2: METRICS VIEW (HTTP STATUS CODES & LATENCY - SCREENSHOT 2) */}
+        {/* SCREEN 2: METRICS VIEW (LINE GRAPH WITH HOVER DETAILS - FIXES ITEM #7) */}
         {activeNav === 'metrics' && (
           <div className="space-y-6">
             
-            {/* Header */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs">
-              <h1 className="text-2xl font-extrabold text-[#2B2826]">Metrics</h1>
+              <h1 className="text-2xl font-extrabold text-[#2B2826]">Metrics & Real-time Graph</h1>
               <p className="text-xs text-[#6E685E] mt-0.5">
-                Real-time API request throughput, HTTP status codes breakdown, and p95 inference latency.
+                Real-time API request throughput, HTTP status codes breakdown, and p95 inference latency. Hover over line points to inspect live details.
               </p>
             </div>
 
-            {/* HTTP Status Codes Timeline Graph Card (Screenshot 2 & Fixes Info Reference Error - ITEM 2) */}
             <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold text-sm text-[#2B2826] flex items-center gap-2">
-                  <span>HTTP Status Codes</span>
+                  <span>HTTP Status Codes & Latency Timeline</span>
                   <Info className="w-4 h-4 text-[#9B9488]" />
                 </h3>
 
-                {/* Status Legend Pills */}
                 <div className="flex items-center space-x-3 text-xs font-bold">
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span> 200 OK (99.2%)</span>
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span> 429 Rate Limit</span>
@@ -359,33 +387,79 @@ export const AnalyticsOverview: React.FC = () => {
                 </div>
               </div>
 
-              {/* Timeline SVG Graph Container (Screenshot 2) */}
-              <div className="relative h-60 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] p-6">
+              {/* TIMELINE SVG LINE GRAPH WITH INTERACTIVE HOVER DETAILS (Fixes Item #7) */}
+              <div className="relative h-64 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] p-6 overflow-visible">
                 <svg className="w-full h-full overflow-visible" viewBox="0 0 600 160" preserveAspectRatio="none">
-                  {/* Horizontal Grid lines */}
                   <line x1="0" y1="30" x2="600" y2="30" stroke="#E6E1D7" strokeDasharray="3 3" />
                   <line x1="0" y1="80" x2="600" y2="80" stroke="#E6E1D7" strokeDasharray="3 3" />
                   <line x1="0" y1="130" x2="600" y2="130" stroke="#E6E1D7" strokeDasharray="3 3" />
 
                   {/* 200 OK Green Line Path */}
                   <path 
-                    d="M 10 140 C 100 135, 200 120, 300 135 C 400 140, 500 130, 590 138" 
+                    d="M 20 140 C 100 110, 200 130, 300 130 C 400 70, 500 100, 580 138" 
                     stroke="#10B981" 
                     strokeWidth="3" 
                     fill="none" 
                   />
 
-                  {/* Data Points */}
-                  <circle cx="590" cy="138" r="4" fill="#10B981" />
+                  {/* Interactive Interactive Points with Hover Details (Fixes Item #7) */}
+                  {lineMetricsData.map((pt, idx) => (
+                    <g key={idx}>
+                      <circle 
+                        cx={pt.x} 
+                        cy={pt.y} 
+                        r={hoveredLinePoint?.time === pt.time ? 7 : 5} 
+                        fill={hoveredLinePoint?.time === pt.time ? "#D97757" : "#10B981"}
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                        className="cursor-pointer transition-all duration-200"
+                        onMouseEnter={() => setHoveredLinePoint(pt)}
+                        onMouseLeave={() => setHoveredLinePoint(null)}
+                      />
+                    </g>
+                  ))}
                 </svg>
 
-                {/* X-Axis Timeline Labels (Screenshot 2: 10:12pm, 10:19pm...) */}
+                {/* Floating Tooltip Hover Card on SVG Line Point (Fixes Item #7) */}
+                {hoveredLinePoint && (
+                  <div 
+                    className="absolute z-40 bg-white text-[#2B2826] p-3 rounded-2xl border border-[#E6E1D7] shadow-xl text-xs whitespace-nowrap animate-in fade-in zoom-in-95 duration-150 space-y-1 pointer-events-none"
+                    style={{ 
+                      left: `${(hoveredLinePoint.x / 600) * 85}%`, 
+                      top: `${hoveredLinePoint.y - 60}px` 
+                    }}
+                  >
+                    <div className="font-extrabold text-[#2B2826] text-[11px] border-b border-[#E6E1D7] pb-1 flex items-center justify-between gap-4">
+                      <span>Timestamp: <b>{hoveredLinePoint.time}</b></span>
+                      <span className="bg-[#E6F4F1] text-[#0F766E] font-bold px-1.5 py-0.5 rounded text-[10px]">
+                        200 OK
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono space-y-0.5 pt-0.5">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#6E685E]">200 OK Requests:</span>
+                        <b className="text-[#0F766E]">{hoveredLinePoint.requests200}</b>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#6E685E]">429 Rate Limits:</span>
+                        <b className="text-[#D97706]">{hoveredLinePoint.rate429}</b>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#6E685E]">p95 Latency:</span>
+                        <b className="text-[#2B2826]">{hoveredLinePoint.latency_ms} ms</b>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#6E685E]">Throughput:</span>
+                        <b className="text-[#D97757]">{hoveredLinePoint.tps} tok/s</b>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-[11px] font-mono text-[#9B9488] mt-4 px-2">
-                  <span>10:12pm</span>
-                  <span>10:19pm</span>
-                  <span>10:27pm</span>
-                  <span>10:35pm</span>
-                  <span>10:42pm</span>
+                  {lineMetricsData.map((pt, i) => (
+                    <span key={i}>{pt.time}</span>
+                  ))}
                 </div>
               </div>
 

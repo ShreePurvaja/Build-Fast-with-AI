@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FolderKanban, 
   Sparkles, 
   Plus, 
   Search, 
-  Play, 
-  CheckCircle2, 
-  Clock, 
-  Layers, 
   ChevronRight, 
   Globe, 
-  Database, 
-  Zap,
-  X
+  X,
+  Workflow,
+  User,
+  SlidersHorizontal,
+  RefreshCw
 } from 'lucide-react';
 
 interface Project {
@@ -43,6 +41,8 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
 }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [projectList, setProjectList] = useState<Project[]>(projects);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form Fields for New Project
   const [projName, setProjName] = useState('');
@@ -50,24 +50,72 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
   const [projLanguages, setProjLanguages] = useState<string[]>(['ta', 'hi', 'en']);
   const [projPrompt, setProjPrompt] = useState('');
 
-  const handleToggleLang = (langCode: string) => {
-    if (projLanguages.includes(langCode)) {
-      setProjLanguages(projLanguages.filter(l => l !== langCode));
-    } else {
-      setProjLanguages([...projLanguages, langCode]);
-    }
+  // Fetch workflows from SQLite Backend for the currently logged in user!
+  const fetchWorkflowsFromDB = () => {
+    setIsLoading(true);
+    const token = localStorage.getItem('access_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch('http://localhost:8000/api/workflows', { headers })
+      .then(res => res.json())
+      .then(data => {
+        setIsLoading(false);
+        if (data && (data.workflows || data.projects)) {
+          setProjectList(data.workflows || data.projects);
+        }
+      })
+      .catch(err => {
+        setIsLoading(false);
+        console.error("Failed to fetch workflows from SQLite DB:", err);
+      });
+  };
+
+  useEffect(() => {
+    fetchWorkflowsFromDB();
+  }, []);
+
+  // PERSIST ACTIVE/INACTIVE STATUS TO SQLITE DB
+  const handleToggleStatus = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const targetProj = projectList.find(p => p.id === id);
+    if (!targetProj) return;
+
+    const newStatus = targetProj.status === 'Active' ? 'Inactive' : 'Active';
+
+    setProjectList(prev => prev.map(p => {
+      if (p.id === id) {
+        return { ...p, status: newStatus };
+      }
+      return p;
+    }));
+
+    const token = localStorage.getItem('access_token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch(`http://localhost:8000/api/workflows/${id}/status`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status: newStatus })
+    }).catch(err => console.error("Error updating workflow status in SQLite:", err));
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!projName.trim()) return;
 
-    const newProj = {
+    const token = localStorage.getItem('access_token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const newProj: Project = {
       id: `proj_${Date.now()}`,
       name: projName,
       vertical: projVertical,
       languages: projLanguages,
-      description: projPrompt || 'Automated multi-agent workforce for business operations.',
+      description: projPrompt || 'Automated multi-agent workforce pipeline for business tasks.',
       active_workforces: 1,
       total_executions: 0,
       success_rate: '100%',
@@ -75,149 +123,233 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
       updated_at: 'Just now'
     };
 
-    onCreateProject(newProj);
-    setShowCreateModal(false);
-    setProjName('');
-    setProjPrompt('');
+    fetch('http://localhost:8000/api/workflows', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: projName,
+        vertical: projVertical,
+        description: projPrompt,
+        status: 'Active',
+        nodes: [],
+        connections: [],
+        sticky_notes: []
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.workflow_id) {
+          newProj.id = data.workflow_id;
+        }
+        onCreateProject(newProj);
+        setProjectList(prev => [newProj, ...prev]);
+        setShowCreateModal(false);
+        setProjName('');
+        setProjPrompt('');
+      })
+      .catch(() => {
+        onCreateProject(newProj);
+        setProjectList(prev => [newProj, ...prev]);
+        setShowCreateModal(false);
+        setProjName('');
+        setProjPrompt('');
+      });
   };
 
-  const filteredProjects = projects.filter(p => 
+  const filteredProjects = projectList.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.vertical.toLowerCase().includes(searchQuery.toLowerCase())
+    p.vertical.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto py-4">
+    <div className="space-y-6 w-full max-w-full font-sans text-[#2B2826] pb-10">
       
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs">
+      {/* 1. HEADER & PRIMARY WORKFLOW ACTION BUTTON (n8n Dashboard Layout) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#E6E1D7] pb-5">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#2B2826]">Workspace Projects & Active Runs</h1>
-          <p className="text-xs text-[#6E685E] mt-1">
-            Manage your AI workforce automation projects, MongoDB node pipelines, and active sessions.
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#2B2826]">Overview</h1>
+          <p className="text-xs text-[#6E685E] mt-1 font-medium">
+            All the workflows, credentials and data tables stored securely in SQLite database
           </p>
         </div>
 
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="btn-claude-primary text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 font-bold shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create New Project</span>
-        </button>
-      </div>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={fetchWorkflowsFromDB}
+            className="p-2.5 bg-white border border-[#E6E1D7] hover:border-[#D97757] rounded-xl text-xs font-bold text-[#6E685E] transition-all shadow-2xs"
+            title="Refresh workflows from SQLite DB"
+          >
+            <RefreshCw className={`w-4 h-4 text-[#D97757] ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
 
-      {/* KPI Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
-          <div className="text-xs font-bold text-[#6E685E]">Total Projects</div>
-          <div className="text-2xl font-extrabold text-[#2B2826] mt-1">{projects.length}</div>
-          <div className="text-[11px] text-[#0F766E] font-medium mt-1">3 Active Workforces</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
-          <div className="text-xs font-bold text-[#6E685E]">Prod Executions</div>
-          <div className="text-2xl font-extrabold text-[#2B2826] mt-1">2,596</div>
-          <div className="text-[11px] text-[#0F766E] font-medium mt-1">+18.4% last 7 days</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
-          <div className="text-xs font-bold text-[#6E685E]">Overall Success Rate</div>
-          <div className="text-2xl font-extrabold text-[#0F766E] mt-1">99.6%</div>
-          <div className="text-[11px] text-[#6E685E] font-medium mt-1">4 Escalations resolved</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
-          <div className="text-xs font-bold text-[#6E685E]">MongoDB Nodes Status</div>
-          <div className="text-2xl font-extrabold text-[#D97757] mt-1">Connected</div>
-          <div className="text-[11px] text-[#6E685E] font-medium mt-1">ai_workforce_db ready</div>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="btn-claude-primary text-xs py-2.5 px-4.5 rounded-xl flex items-center space-x-2 font-extrabold shrink-0 shadow-2xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Workflow</span>
+          </button>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E6E1D7] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#9B9488]" />
-          <input 
-            type="text" 
-            placeholder="Search projects by name or vertical..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border border-[#E6E1D7] rounded-xl text-xs bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
-          />
+      {/* 2. STAT METRIC CARDS ROW (5 Stat Cards in 1 Row) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
+        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
+          <div className="text-[11px] font-bold text-[#6E685E]">Prod. executions</div>
+          <div className="text-[10px] text-[#9B9488]">Last 7 days</div>
+          <div className="text-2xl font-extrabold text-[#2B2826] mt-2">1,428</div>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs text-[#6E685E]">
-          <span className="font-bold">Filter:</span>
-          <span className="bg-[#FDF3E9] text-[#D97757] px-2.5 py-1 rounded-lg border border-[#E6E1D7] font-semibold">All Verticals</span>
+        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
+          <div className="text-[11px] font-bold text-[#6E685E]">Failed prod. executions</div>
+          <div className="text-[10px] text-[#9B9488]">Last 7 days</div>
+          <div className="text-2xl font-extrabold text-[#2B2826] mt-2">3</div>
+        </div>
+
+        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
+          <div className="text-[11px] font-bold text-[#6E685E]">Failure rate</div>
+          <div className="text-[10px] text-[#9B9488]">Last 7 days</div>
+          <div className="text-2xl font-extrabold text-[#0F766E] mt-2">0.2%</div>
+        </div>
+
+        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
+          <div className="text-[11px] font-bold text-[#6E685E]">Time saved</div>
+          <div className="text-[10px] text-[#9B9488]">Last 7 days</div>
+          <div className="text-2xl font-extrabold text-[#D97757] mt-2">14.2 hrs</div>
+        </div>
+
+        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
+          <div className="text-[11px] font-bold text-[#6E685E]">Run time (avg.)</div>
+          <div className="text-[10px] text-[#9B9488]">Last 7 days</div>
+          <div className="text-2xl font-extrabold text-[#2B2826] mt-2">1.18s</div>
         </div>
       </div>
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* 3. SUB-TABS NAVIGATION & SEARCH CONTROLS BAR */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-[#E6E1D7] pb-3">
+        {/* Left Workflow Count Indicator */}
+        <div className="flex items-center space-x-2 text-xs font-bold">
+          <span className="text-[#2B2826] font-extrabold text-sm">Workflows</span>
+          <span className="bg-[#FDF3E9] text-[#D97757] text-[11px] font-extrabold px-2 py-0.5 rounded-lg border border-[#E6E1D7]">
+            {filteredProjects.length} total
+          </span>
+        </div>
+
+        {/* Right Search & Filter Controls */}
+        <div className="flex items-center space-x-2.5">
+          <div className="relative flex-1 md:w-64">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#9B9488]" />
+            <input 
+              type="text" 
+              placeholder="Search workflows..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 border border-[#E6E1D7] rounded-xl text-xs bg-white focus:outline-none focus:border-[#D97757]"
+            />
+          </div>
+
+          <select className="bg-white border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#6E685E] focus:outline-none focus:border-[#D97757]">
+            <option>Sort by last updated</option>
+            <option>Sort by name</option>
+            <option>Sort by created date</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 4. WORKFLOW ITEM LIST */}
+      <div className="space-y-3">
         {filteredProjects.map(proj => (
           <div 
             key={proj.id}
-            className="bg-white p-5 rounded-2xl border border-[#E6E1D7] hover:border-[#D97757] transition-all shadow-2xs flex flex-col justify-between"
+            onClick={() => onOpenCanvas(proj)}
+            className="bg-white p-4 rounded-2xl border border-[#E6E1D7] hover:border-[#D97757] transition-all shadow-2xs cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
           >
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#FDF3E9] text-[#D97757] flex items-center justify-center font-bold text-xs border border-[#E6E1D7]">
-                    <FolderKanban className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-base text-[#2B2826]">{proj.name}</h3>
-                    <span className="text-[11px] font-semibold text-[#6E685E]">{proj.vertical}</span>
-                  </div>
-                </div>
-                <span className={`badge-pill ${proj.status === 'Active' ? 'badge-success' : 'badge-inactive'}`}>
-                  {proj.status}
-                </span>
+            {/* Left Side Workflow Info */}
+            <div className="flex items-center space-x-3.5 overflow-hidden">
+              <div className="w-9 h-9 rounded-xl bg-[#FDF3E9] text-[#D97757] flex items-center justify-center font-bold text-xs border border-[#E6E1D7] shrink-0 group-hover:scale-105 transition-transform">
+                <Workflow className="w-4.5 h-4.5" />
               </div>
 
-              <p className="text-xs text-[#6E685E] mt-3 line-clamp-2 leading-relaxed">
-                {proj.description}
-              </p>
-
-              {/* Language Tags */}
-              <div className="flex items-center space-x-1.5 mt-3">
-                <Globe className="w-3.5 h-3.5 text-[#9B9488]" />
-                <div className="flex gap-1">
-                  {proj.languages.map(lang => (
-                    <span key={lang} className="bg-[#FAF8F5] text-[#2B2826] text-[10px] font-bold px-2 py-0.5 rounded border border-[#E6E1D7]">
-                      {lang.toUpperCase()}
-                    </span>
-                  ))}
+              <div className="overflow-hidden">
+                <h3 className="font-extrabold text-sm text-[#2B2826] group-hover:text-[#D97757] transition-colors truncate">
+                  {proj.name}
+                </h3>
+                <div className="text-[11px] text-[#6E685E] mt-0.5 font-medium truncate flex items-center gap-1.5">
+                  <span>Updated {proj.updated_at}</span>
+                  <span className="text-[#9B9488]">•</span>
+                  <span className="truncate">{proj.description}</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 pt-4 border-t border-[#E6E1D7] flex items-center justify-between">
-              <div className="text-xs text-[#6E685E]">
-                <span className="font-bold text-[#2B2826]">{proj.total_executions}</span> runs • Updated {proj.updated_at}
-              </div>
+            {/* Right Side Actions & Persistent Active Toggle Switch */}
+            <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
+              <span className="bg-[#FAF8F5] text-[#6E685E] text-[10.5px] font-bold px-2.5 py-1 rounded-lg border border-[#E6E1D7] flex items-center gap-1">
+                <User className="w-3 h-3 text-[#9B9488]" />
+                <span>{proj.vertical}</span>
+              </span>
+
+              <span className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border flex items-center gap-1.5 ${
+                proj.status === 'Active' ? 'bg-[#E6F4F1] text-[#0F766E] border-[#99F6E4]' : 'bg-[#FAF8F5] text-[#9B9488] border-[#E6E1D7]'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${proj.status === 'Active' ? 'bg-[#0F766E]' : 'bg-[#9B9488]'}`} />
+                <span>{proj.status}</span>
+              </span>
+
+              {/* Persistent Toggle Switch linked to SQLite DB */}
+              <button 
+                onClick={(e) => handleToggleStatus(proj.id, e)}
+                className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                  proj.status === 'Active' ? 'bg-[#10B981]' : 'bg-[#D6CFBF]'
+                }`}
+                title="Toggle Workflow Active Status in Database"
+              >
+                <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-xs ${
+                  proj.status === 'Active' ? 'translate-x-4' : 'translate-x-0'
+                }`} />
+              </button>
 
               <button 
-                onClick={() => onOpenCanvas(proj)}
-                className="btn-claude-secondary text-xs py-1.5 px-3 flex items-center space-x-1 font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenCanvas(proj);
+                }}
+                className="p-1.5 text-[#9B9488] hover:text-[#D97757] rounded-lg hover:bg-[#FAF8F5] transition-colors"
+                title="Open Canvas Studio"
               >
-                <span>Open Canvas</span>
-                <ChevronRight className="w-3.5 h-3.5 text-[#D97757]" />
+                <ChevronRight className="w-4.5 h-4.5" />
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* CREATE NEW PROJECT MODAL */}
+      {/* 5. FOOTER PAGINATION BAR */}
+      <div className="flex items-center justify-between pt-4 border-t border-[#E6E1D7] text-xs text-[#6E685E] font-medium">
+        <div>
+          Total <span className="font-bold text-[#2B2826]">{filteredProjects.length}</span>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <span className="w-7 h-7 bg-white border border-[#D97757] text-[#D97757] font-bold rounded-lg flex items-center justify-center text-xs shadow-2xs">
+            1
+          </span>
+          <select className="bg-white border border-[#E6E1D7] rounded-lg px-2 py-1 text-xs text-[#6E685E] focus:outline-none">
+            <option>50/page</option>
+            <option>20/page</option>
+          </select>
+        </div>
+      </div>
+
+      {/* CREATE NEW WORKFLOW MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-[#E6E1D7] p-6 max-w-lg w-full shadow-xl">
             <div className="flex items-center justify-between pb-4 border-b border-[#E6E1D7]">
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-5 h-5 text-[#D97757]" />
-                <h3 className="font-extrabold text-base text-[#2B2826]">Create New AI Workforce Project</h3>
+                <h3 className="font-extrabold text-base text-[#2B2826]">Create New Workflow</h3>
               </div>
               <button onClick={() => setShowCreateModal(false)} className="text-[#9B9488] hover:text-[#2B2826]">
                 <X className="w-5 h-5" />
@@ -226,7 +358,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
 
             <form onSubmit={handleFormSubmit} className="space-y-4 mt-4">
               <div>
-                <label className="text-xs font-bold text-[#2B2826] block mb-1">Project Name</label>
+                <label className="text-xs font-bold text-[#2B2826] block mb-1">Workflow Name</label>
                 <input 
                   type="text"
                   placeholder="e.g. Customer Support & Refund Automation"
@@ -238,69 +370,43 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#2B2826] block mb-1">Industry Vertical</label>
+                <label className="text-xs font-bold text-[#2B2826] block mb-1">Vertical / Tag</label>
                 <select 
                   value={projVertical}
                   onChange={e => setProjVertical(e.target.value)}
                   className="w-full px-3 py-2 border border-[#E6E1D7] rounded-xl text-xs bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
                 >
                   <option>D2C E-commerce</option>
-                  <option>Appointment Booking (Clinic/Salon)</option>
-                  <option>Sales Lead Follow-up & Booking</option>
-                  <option>Recruitment & HR Screening</option>
-                  <option>Logistics & Delivery Tracking</option>
+                  <option>Appointment Booking</option>
+                  <option>Sales Lead Follow-up</option>
+                  <option>Recruitment & HR</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#2B2826] block mb-1">Target Languages (Indic Voice)</label>
-                <div className="flex gap-2">
-                  {[
-                    { code: 'ta', label: 'Tamil (தமிழ்)' },
-                    { code: 'hi', label: 'Hindi (हिंदी)' },
-                    { code: 'en', label: 'English' },
-                    { code: 'te', label: 'Telugu' }
-                  ].map(item => (
-                    <button
-                      type="button"
-                      key={item.code}
-                      onClick={() => handleToggleLang(item.code)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border font-semibold ${
-                        projLanguages.includes(item.code)
-                          ? 'bg-[#FDF3E9] text-[#D97757] border-[#D97757]'
-                          : 'bg-[#FAF8F5] text-[#6E685E] border-[#E6E1D7]'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#2B2826] block mb-1">Plain-Language Business Requirement</label>
+                <label className="text-xs font-bold text-[#2B2826] block mb-1">Description</label>
                 <textarea 
-                  rows={3}
-                  placeholder="Example: I need to handle customer refunds and order status questions in Tamil and English."
+                  placeholder="Describe what this workflow automated step does..."
                   value={projPrompt}
                   onChange={e => setProjPrompt(e.target.value)}
                   className="w-full px-3 py-2 border border-[#E6E1D7] rounded-xl text-xs bg-[#FAF8F5] focus:outline-none focus:border-[#D97757] resize-none"
+                  rows={3}
                 />
               </div>
 
-              <div className="flex space-x-2 pt-3 border-t border-[#E6E1D7]">
+              <div className="flex justify-end space-x-2 pt-2 border-t border-[#E6E1D7]">
                 <button 
                   type="button" 
                   onClick={() => setShowCreateModal(false)}
-                  className="btn-claude-secondary flex-1 text-xs py-2"
+                  className="btn-claude-secondary text-xs py-2 px-4 font-bold"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn-claude-primary flex-1 text-xs py-2 font-bold"
+                  className="btn-claude-primary text-xs py-2 px-5 font-bold"
                 >
-                  Generate Workforce & Open Canvas
+                  Create & Launch Studio
                 </button>
               </div>
             </form>

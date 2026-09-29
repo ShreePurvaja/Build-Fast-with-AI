@@ -18,13 +18,14 @@ interface UserState {
 }
 
 export default function Home() {
-  // 1st screen by default is 'landing' (About Project & Features)
-  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('landing');
+  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('projects');
   
   const [user, setUser] = useState<UserState | null>({
     name: 'Alex Morgan',
     email: 'demo@company.com'
   });
+
+  const [activeProject, setActiveProject] = useState<any>(null);
 
   // Projects State
   const [projects, setProjects] = useState([
@@ -33,7 +34,7 @@ export default function Home() {
       name: 'Customer Support & Refund Automation',
       vertical: 'D2C E-commerce',
       languages: ['ta', 'hi', 'en'],
-      description: 'Automated order verification in MongoDB and refund processing with human approval gates.',
+      description: 'Automated order verification in SQLite DB and refund processing with human approval gates.',
       active_workforces: 1,
       total_executions: 1428,
       success_rate: '99.8%',
@@ -73,39 +74,39 @@ export default function Home() {
       time: '20:17:29',
       duration: '1.24s',
       status: 'Succeeded',
-      input: 'MongoDB Order #4821 Refund enquiry',
-      output: 'Refund RF-2291 processed in MongoDB & emailed via Gmail'
-    },
-    {
-      id: 'exec_158',
-      time: '20:16:46',
-      duration: '1.85s',
-      status: 'Succeeded',
-      input: 'Order #4819 Delivery SLA',
-      output: 'Status: In Transit'
-    },
-    {
-      id: 'exec_157',
-      time: '20:02:08',
-      duration: '3.12s',
-      status: 'Error',
-      input: 'Order #0000 Invalid',
-      output: 'Error: Document not found'
+      input: 'SQLite Order #4821 Refund enquiry',
+      output: 'Refund RF-2291 processed in SQLite DB & emailed via Gmail'
     }
   ]);
 
+  // Restore authenticated session using JWT access_token from localStorage
   useEffect(() => {
-    // Fetch initial projects from backend
-    fetch('http://localhost:8000/api/projects')
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      fetch('http://localhost:8000/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.user) {
+            setUser(data.user);
+          }
+        })
+        .catch(() => {});
+    }
+
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    // Fetch initial projects from backend SQLite DB for current user
+    fetch('http://localhost:8000/api/workflows', { headers })
       .then(res => res.json())
       .then(data => {
-        if (data && data.projects && data.projects.length > 0) {
-          setProjects(data.projects);
+        if (data && (data.workflows || data.projects)) {
+          setProjects(data.workflows || data.projects);
         }
       })
-      .catch(() => {
-        // Silent fallback to local initial state
-      });
+      .catch(() => {});
   }, []);
 
   const handleLoginSuccess = (userData: UserState) => {
@@ -113,8 +114,20 @@ export default function Home() {
     setActiveTab('projects');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    setUser(null);
+    setActiveTab('auth');
+  };
+
+  const handleOpenCanvas = (proj: any) => {
+    setActiveProject(proj);
+    setActiveTab('editor');
+  };
+
   const handleCreateProject = (newProj: any) => {
     setProjects(prev => [newProj, ...prev]);
+    setActiveProject(newProj);
     setActiveTab('editor');
   };
 
@@ -123,98 +136,98 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex flex-col md:flex-row font-sans text-[#2B2826]">
-      {/* Left Application Sidebar (shown on all screens EXCEPT the 1st landing screen) */}
-      {activeTab !== 'landing' && (
-        <Navbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          user={user}
-          onOpenCreateProject={() => setActiveTab('projects')}
-          onLogout={() => setUser(null)}
-        />
-      )}
+    <div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2B2826]">
+      {activeTab === 'landing' ? (
+        /* 1st Screen: Landing Page Layout */
+        <div className="flex flex-col min-h-screen w-full">
+          <main className="flex-1 w-full">
+            <LandingPage 
+              onStartBuilding={() => setActiveTab(user ? 'projects' : 'auth')}
+              onExploreProjects={() => setActiveTab('projects')}
+              onOpenAnalytics={() => setActiveTab('analytics')}
+              onOpenMemory={() => setActiveTab('projects')}
+            />
+          </main>
+        </div>
+      ) : (
+        /* App Layout: Header & View Area */
+        <div className="flex flex-col min-h-screen w-full">
+          {/* Hide Navbar in editor view to eliminate double top headers */}
+          {activeTab !== 'editor' && (
+            <Navbar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              user={user}
+              onOpenCreateProject={() => setActiveTab('projects')}
+              onLogout={handleLogout}
+            />
+          )}
 
-      {/* Main App View Routing */}
-      <main className="flex-1 w-full overflow-y-auto">
-        {/* 1st Screen: About Project Overview */}
-        {activeTab === 'landing' && (
-          <LandingPage 
-            onStartBuilding={() => setActiveTab(user ? 'projects' : 'auth')}
-            onExploreProjects={() => setActiveTab('editor')}
-            onOpenAnalytics={() => setActiveTab('analytics')}
-            onOpenMemory={() => setActiveTab('memory')}
-          />
-        )}
+          <div className="flex-1 flex flex-col min-h-screen min-w-0 w-full">
+            {/* Main App View Routing */}
+            <main className={`flex-1 w-full overflow-y-auto ${
+              activeTab === 'editor' || activeTab === 'analytics' ? 'p-0 max-w-full' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8'
+            }`}>
+              {/* Auth Screen */}
+              {activeTab === 'auth' && (
+                <div className="max-w-md mx-auto py-10">
+                  <AuthScreen onLoginSuccess={handleLoginSuccess} />
+                </div>
+              )}
 
-        {/* Auth Screen */}
-        {activeTab === 'auth' && (
-          <AuthScreen onLoginSuccess={handleLoginSuccess} />
-        )}
+              {/* Home Screen: User's Recent Projects */}
+              {activeTab === 'projects' && (
+                <ProjectsOverview 
+                  projects={projects}
+                  onOpenCanvas={handleOpenCanvas}
+                  onCreateProject={handleCreateProject}
+                />
+              )}
 
-        {/* Home Screen: User's Recent Projects */}
-        {activeTab === 'projects' && (
-          <ProjectsOverview 
-            projects={projects}
-            onOpenCanvas={(proj) => setActiveTab('editor')}
-            onCreateProject={handleCreateProject}
-          />
-        )}
+              {/* n8n Studio Workflow Canvas */}
+              {activeTab === 'editor' && (
+                <WorkflowCanvas 
+                  activeProject={activeProject}
+                  onRunFinished={handleRunFinished} 
+                  onBackToProjects={() => setActiveTab('projects')}
+                />
+              )}
 
-        {/* n8n Studio Workflow Canvas */}
-        {activeTab === 'editor' && (
-          <WorkflowCanvas 
-            onRunFinished={handleRunFinished} 
-            onBackToProjects={() => setActiveTab('projects')}
-          />
-        )}
+              {/* Model Usage & NVIDIA Analytics Dashboard */}
+              {activeTab === 'analytics' && (
+                <div className="py-6 px-4">
+                  <AnalyticsOverview />
+                </div>
+              )}
 
-        {/* Model Usage & NVIDIA Analytics Dashboard */}
-        {activeTab === 'analytics' && (
-          <div className="py-6 px-4">
-            <AnalyticsOverview />
+              {/* Executions History Runs */}
+              {activeTab === 'executions' && (
+                <ExecutionsView executions={executions} />
+              )}
+
+              {/* Escalations Inbox */}
+              {activeTab === 'escalations' && (
+                <div className="max-w-6xl mx-auto py-6 px-4">
+                  <EscalationInbox />
+                </div>
+              )}
+
+              {/* Knowledge Base Manager */}
+              {activeTab === 'kb' && (
+                <div className="max-w-6xl mx-auto py-6 px-4">
+                  <KnowledgeBaseManager />
+                </div>
+              )}
+
+              {/* AGENT_MEMORY.md Audit Backlog Table */}
+              {activeTab === 'memory' && (
+                <div className="py-6 px-4">
+                  <MemoryBacklogTable />
+                </div>
+              )}
+            </main>
           </div>
-        )}
-
-        {/* Executions History Runs */}
-        {activeTab === 'executions' && (
-          <ExecutionsView executions={executions} />
-        )}
-
-        {/* Escalations Inbox */}
-        {activeTab === 'escalations' && (
-          <div className="max-w-6xl mx-auto py-6 px-4">
-            <EscalationInbox />
-          </div>
-        )}
-
-        {/* Knowledge Base Manager */}
-        {activeTab === 'kb' && (
-          <div className="max-w-6xl mx-auto py-6 px-4">
-            <KnowledgeBaseManager />
-          </div>
-        )}
-
-        {/* AGENT_MEMORY.md Audit Backlog Table */}
-        {activeTab === 'memory' && (
-          <div className="py-6 px-4">
-            <MemoryBacklogTable />
-          </div>
-        )}
-      </main>
-
-      {/* Global Footer */}
-      {activeTab !== 'editor' && (
-        <footer className="border-t border-[#E6E1D7] bg-white py-4 mt-8">
-          <div className="max-w-7xl mx-auto px-4 text-center text-xs text-[#6E685E] space-y-1 font-medium">
-            <p>
-              <strong>AI Workforce Platform</strong> • Indic Voice & Multi-Agent Automation
-            </p>
-            <p className="text-[11px] text-[#9B9488]">
-              Claude Light Design System • NVIDIA NIM GPU Acceleration • MongoDB Backend • FastAPI & Next.js
-            </p>
-          </div>
-        </footer>
+        </div>
       )}
     </div>
   );

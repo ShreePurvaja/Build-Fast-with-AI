@@ -85,7 +85,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-[#6E685E] max-w-2xl mx-auto mt-4 leading-relaxed font-medium">
-            Automate D2C customer support, sales lead booking, and technical helpdesks. Speaks Indian languages by voice, executes gated MongoDB/CRM tools, and escalates to humans with full context. Powered by NVIDIA NIM GPU inference.
+            Automate D2C customer support, sales lead booking, and technical helpdesks. Speaks Indian languages by voice, connects to any DB (MongoDB, Postgres, Redis), and escalates to humans with full context. Powered by NVIDIA NIM GPU inference.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4 mt-8">
@@ -98,11 +98,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
             
             <button 
-              onClick={onStartBuilding}
+              onClick={onExploreProjects}
               className="btn-claude-secondary text-sm py-3 px-6 rounded-xl flex items-center space-x-2 font-bold"
             >
               <Workflow className="w-4 h-4 text-[#D97757]" />
-              <span>Open Visual n8n Studio</span>
+              <span>Open Workforces Overview</span>
             </button>
           </div>
 
@@ -127,9 +127,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7]">
               <div className="flex items-center space-x-2 text-xs font-bold text-[#2B2826]">
                 <Database className="w-4 h-4 text-[#10B981]" />
-                <span>MongoDB Connected DB</span>
+                <span>Custom DB Gateway</span>
               </div>
-              <p className="text-[11px] text-[#6E685E] mt-1">Direct document query & insert with graceful offline fallback.</p>
+              <p className="text-[11px] text-[#6E685E] mt-1">Connect MongoDB, PostgreSQL, MySQL or Redis with custom URLs.</p>
             </div>
 
             <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7]">
