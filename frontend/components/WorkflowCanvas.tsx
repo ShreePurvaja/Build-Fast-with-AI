@@ -128,11 +128,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   const markDirty = () => setIsDirty(true);
 
-  // Fetch workflow from SQLite database on mount or activeProject change
+  // Fetch workflow from MongoDB database on mount or activeProject change
   useEffect(() => {
     const wfId = activeProject?.id || 'proj_support_01';
     setCurrentWorkflowId(wfId);
     if (activeProject?.name) setWorkflowTitle(activeProject.name);
+
+    // Immediately load nodes from activeProject if already available
+    if (activeProject?.nodes && Array.isArray(activeProject.nodes) && activeProject.nodes.length > 0) {
+      setNodes(activeProject.nodes);
+    }
+    if (activeProject?.connections && Array.isArray(activeProject.connections)) {
+      setConnections(activeProject.connections);
+    }
+    if (activeProject?.sticky_notes && Array.isArray(activeProject.sticky_notes)) {
+      setStickyNotes(activeProject.sticky_notes);
+    }
 
     fetch(`http://localhost:8000/api/workflows/${wfId}`)
       .then(res => res.json())
@@ -143,17 +154,17 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           if (wf.nodes && Array.isArray(wf.nodes) && wf.nodes.length > 0) {
             setNodes(wf.nodes);
           }
-          if (wf.connections && Array.isArray(wf.connections) && wf.connections.length > 0) {
+          if (wf.connections && Array.isArray(wf.connections)) {
             setConnections(wf.connections);
           }
-          if (wf.sticky_notes && Array.isArray(wf.sticky_notes) && wf.sticky_notes.length > 0) {
+          if (wf.sticky_notes && Array.isArray(wf.sticky_notes)) {
             setStickyNotes(wf.sticky_notes);
           }
           setIsDirty(false);
         }
       })
-      .catch(err => console.error("Error fetching workflow from SQLite DB:", err));
-  }, [activeProject]);
+      .catch(err => console.error("Error fetching workflow from MongoDB Atlas:", err));
+  }, [activeProject?.id]);
 
   // Save Canvas to SQLite Database (Fixes Item #3)
   const handleSaveWorkflowCanvas = (onSavedCallback?: () => void) => {
