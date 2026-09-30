@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trainery AI — Attrition Prediction Engine Technical Guide</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- KaTeX CSS & JS for Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
+  
+  <!-- Mermaid.js for Interactive Flowcharts -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #0F172A; /* Dark Slate 900 */
+      color: #E2E8F0;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .mermaid {
+      background: #1E293B;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    table th {
+      background-color: #1E293B;
+      color: #94A3B8;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    table td {
+      border-bottom: 1px solid #334155;
+    }
+    .katex-display {
+      margin: 1em 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 6px 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+
+  <!-- Header / Navigation Banner -->
+  <header class="sticky top-0 z-50 glass-card rounded-none border-t-0 border-x-0 border-b border-slate-700/50 px-8 py-4 mb-8">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+          AI
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">Trainery AI Workforce Engine</h1>
+          <p class="text-xs text-slate-400">Attrition Prediction Engine — Technical Reference</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Engine Status: Native np.nan Pipeline
+        </span>
+        <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+          Model: XGBoost + SHAP
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+
+    <!-- Section 1: Architecture -->
+    <section class="glass-card p-6 md:p-8">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">1</div>
+        <h2 class="text-2xl font-bold text-white">Engine Architecture & Native `np.nan` Flow</h2>
+      </div>
+      <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+        The <strong>Trainery AI Attrition Prediction Engine</strong> reads employee signals, runs feature engineering with native <code class="text-indigo-300 font-mono">np.nan</code> support, evaluates a calibrated XGBoost ensemble model, and generates SHAP percentage-point explanations.
+      </p>
+
+      <div class="mermaid mb-4">
+flowchart TD
+    A["Raw Database / API Inputs"] --> B{"Count Present Signals"}
+    B -->|"Count < 4"| C["Return Insufficient Data Tier (No Score)"]
+    B -->|"Count ≥ 4"| D["Step 1: Fetch Raw Signals (11 Base Features)"]
+    
+    subgraph Data Fetching & Processing
+        D --> D1["SQL Queries (Tenure, Perf, Promo, Stress, Comp)"]
+        D --> D2["12-Month Slope Calculation (EngagementTrend)"]
+        D --> D3["LLM Sentiment Pipeline (SentimentScore, ConflictScore)"]
+    end
+
+    D1 & D2 & D3 --> E{"Any Missing Signals?"}
+    E -->|"Yes"| F["Pass Native np.nan (Zero-fill contribution in derived formulas)"]
+    E -->|"No"| G["Raw Feature Vector (11 Features)"]
+    F --> G
+
+    G --> H["Step 2: Feature Engineering Pipeline (add_features)"]
+    H --> I["Expanded Feature Vector (17 Features: 11 Base + 6 FE)"]
+
+    subgraph Machine Learning Pipeline
+        I --> J["Calibrated XGBoost Model (predict_proba with Native NaNs)"]
+        J --> K["Clip Probability Range (np.clip between 5.0% and 95.0%)"]
+        I --> L["SHAP TreeExplainer (Compute Log-Odds φ_i)"]
+        L --> M["Log-Odds → Probability Percentage Points (Δ_pp) Conversion"]
+    end
+
+    K --> N{"Risk Tier Threshold Classification"}
+    N -->|"Score < 35%"| O1["Low Risk Tier"]
+    N -->|"35% ≤ Score < 85%"| O2["Medium Risk Tier"]
+    N -->|"Score ≥ 85%"| O3["High Risk Tier"]
+
+    M --> P["Filter Non-Imputed Drivers (Top 3 Risk & Protective)"]
+    O1 & O2 & O3 & P --> Q["Final Prediction Result JSON Response"]
+      </div>
+    </section>
+
+    <!-- Section 2: Complete 17 Signals Inventory -->
+    <section class="glass-card p-6 md:p-8">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">2</div>
+        <h2 class="text-2xl font-bold text-white">Complete Signal Inventory (17 Features Total)</h2>
+      </div>
+      <p class="text-slate-300 text-sm mb-6">
+        The ML model takes <strong>11 Real (Raw Base) Signals</strong> collected from surveys/DB and auto-computes <strong>6 Feature Engineered (FE) Signals</strong>, making a total vector of <strong>17 features</strong>.
+      </p>
+
+      <!-- Grid for Signals -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        
+        <!-- 11 Base Signals Card -->
+        <div class="bg-slate-800/80 rounded-xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-indigo-300 text-lg flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-indigo-400"></span> 11 Real Raw Base Signals
+            </h3>
+            <span class="text-xs px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Inputs</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr>
+                  <th class="p-2">Signal Name</th>
+                  <th class="p-2">Valid Range</th>
+                  <th class="p-2">Description</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-700/50 text-slate-300">
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">EngagementScore</td><td class="p-2">0.0 to 10.0</td><td class="p-2">Overall employee engagement rating.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">TenureMonths</td><td class="p-2">0 to 600</td><td class="p-2">Total months employed at the company.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">PerformanceScore</td><td class="p-2">0.0 to 10.0</td><td class="p-2">Performance appraisal rating.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">EngagementTrend</td><td class="p-2">-1.0 to +1.0</td><td class="p-2">12-month slope of engagement changes.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">StressScore</td><td class="p-2">0.0 to 10.0</td><td class="p-2">Workplace stress level rating.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">PromotionDelay</td><td class="p-2">0 to 120</td><td class="p-2">Months delayed since expected promotion.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">SentimentScore</td><td class="p-2">-1.0 to +1.0</td><td class="p-2">NLP sentiment from survey feedback text.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">ConflictScore</td><td class="p-2">0.0 to 10.0</td><td class="p-2">Team/interpersonal conflict extracted by LLM.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">ExternalCompRatio</td><td class="p-2">0.0 to 2.0</td><td class="p-2">Pay ratio vs external market median.</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">InternalCompPosition</td><td class="p-2">0.0 to 2.0</td><td class="p-2">Position within internal pay band (0.0=min, 1.0=max).</td></tr>
+                <tr><td class="p-2 font-mono text-indigo-300 font-semibold">SalaryStagnation</td><td class="p-2">0 to 60</td><td class="p-2">Months since last salary increase.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 6 FE Signals Card -->
+        <div class="bg-slate-800/80 rounded-xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-purple-300 text-lg flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-purple-400"></span> 6 Feature Engineered Signals
+            </h3>
+            <span class="text-xs px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Auto-Computed</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr>
+                  <th class="p-2">FE Signal Name</th>
+                  <th class="p-2">Math Formula</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-700/50 text-slate-300">
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">stress_per_tenure</td>
+                  <td class="p-2 font-mono text-xs">$$\frac{\text{StressScore}}{\text{TenureMonths} + 1}$$</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">engagement_drop</td>
+                  <td class="p-2 font-mono text-xs">$$\text{EngagementScore} \times (1 - \text{EngagementTrend})$$</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">burnout_index</td>
+                  <td class="p-2 font-mono text-xs">$$\frac{\text{StressScore} \times \text{ConflictScore}}{\text{EngagementScore} + 1}$$</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">stress_log</td>
+                  <td class="p-2 font-mono text-xs">$$\ln(1 + \text{StressScore})$$</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">tenure_sqrt</td>
+                  <td class="p-2 font-mono text-xs">$$\sqrt{\text{TenureMonths}}$$</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono text-purple-300 font-semibold">risk_score_derived</td>
+                  <td class="p-2 text-xs">Weighted HR composite risk formula (see below).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Derived Formula Block -->
+      <div class="bg-slate-900/90 rounded-xl p-5 border border-indigo-500/30">
+        <h4 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">Composite Risk Score Formula (`risk_score_derived`)</h4>
+        <div class="text-sm font-mono text-slate-200 overflow-x-auto py-2">
+          $$\text{risk\_score\_derived} = \left(\frac{\text{Stress}}{10} \times 2.2\right) + \left(\frac{10 - \text{Engagement}}{10} \times 2.0\right) + \left(\max(0, -\text{Trend}) \times 1.8\right) + \left(\max(0, -\text{Sentiment}) \times 1.4\right) + \left(\min(1, \frac{\text{PromoDelay}}{24}) \times 1.6\right) + \left(\frac{\text{Conflict}}{10} \times 1.3\right) + \left(\frac{10 - \text{Performance}}{10} \times 0.9\right)$$
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Data Origin & Native np.nan Handling -->
+    <section class="glass-card p-6 md:p-8">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">3</div>
+        <h2 class="text-2xl font-bold text-white">Data Fetching & Native `np.nan` Handling</h2>
+      </div>
+
+      <div class="space-y-6 text-sm text-slate-300">
+        <p>
+          When predictions are requested by <code class="text-indigo-300 bg-slate-800 px-1.5 py-0.5 rounded">account_id</code>, the engine queries the platform database to construct signal vectors automatically.
+        </p>
+
+        <!-- Slope Math -->
+        <div class="bg-slate-800/90 p-5 rounded-xl border border-slate-700">
+          <h3 class="text-base font-bold text-indigo-300 mb-2">📈 Linear Regression Slope Calculation for `EngagementTrend`</h3>
+          <p class="text-xs text-slate-400 mb-3">
+            If an employee has completed <strong>at least 4 closed survey cycles</strong> over the past 12 months, the engine computes the trend slope \(m\):
+          </p>
+          <div class="text-center font-mono text-slate-200 my-4">
+            $$m = \frac{n\sum (xy) - (\sum x)(\sum y)}{n\sum (x^2) - (\sum x)^2}$$
+          </div>
+          <p class="text-xs text-slate-400">
+            Where \(x\) is the survey cycle index \((0, 1, 2, ...)\) and \(y\) is the cycle engagement score. If fewer than 4 surveys exist, `EngagementTrend` is set to <code class="text-amber-300 font-mono">np.nan</code>.
+          </p>
+        </div>
+
+        <!-- Native NaN Handling Block -->
+        <div class="bg-slate-800/90 p-5 rounded-xl border border-emerald-500/30">
+          <h3 class="text-base font-bold text-emerald-400 mb-2">⚡ Native `np.nan` Missing Value Strategy</h3>
+          <p class="text-xs text-slate-300 mb-2">
+            When 4 or more signals exist, any missing null fields are passed natively to XGBoost as <strong><code class="text-amber-300 font-mono">np.nan</code></strong>.
+          </p>
+          <ul class="list-disc list-inside text-xs text-slate-400 space-y-1.5 pl-2">
+            <li><strong>No Synthetic Averages</strong>: The engine does NOT replace missing data with artificial dataset averages.</li>
+            <li><strong>XGBoost Default Branches</strong>: Tree split nodes process <code class="text-amber-300 font-mono">np.nan</code> values natively by following learned default missing branches.</li>
+            <li><strong>Insufficient Data Cutoff</strong>: If fewer than 4 signals are present, scoring halts and <code class="text-indigo-300 font-mono">risk_tier = "insufficient_data"</code> is returned.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: SHAP Math & Explanation Conversion -->
+    <section class="glass-card p-6 md:p-8">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">4</div>
+        <h2 class="text-2xl font-bold text-white">SHAP Explanation Math ($\Delta_{pp}$ Conversion)</h2>
+      </div>
+
+      <div class="space-y-6 text-sm text-slate-300">
+        <p>
+          Standard SHAP TreeExplainer outputs feature contributions in <strong>log-odds (margin space)</strong>. The Trainery engine converts log-odds into clear <strong>Probability Percentage Points ($\Delta_{pp}$)</strong> for HR leaders.
+        </p>
+
+        <!-- Math Steps -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-indigo-400 font-bold mb-2">Step 1: Base Probability</div>
+            $$P_{\text{base}} = \frac{1}{1 + e^{-\phi_0}}$$
+            <p class="text-[10px] text-slate-400 mt-2">Where \(\phi_0\) is the dataset log-odds baseline.</p>
+          </div>
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-indigo-400 font-bold mb-2">Step 2: Probability with Feature</div>
+            $$P_{\text{with}} = \frac{1}{1 + e^{-(\phi_0 + \phi_i)}}$$
+            <p class="text-[10px] text-slate-400 mt-2">Where \(\phi_i\) is raw SHAP feature margin.</p>
+          </div>
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div class="text-purple-400 font-bold mb-2">Step 3: Contribution ($\Delta_{pp}$)</div>
+            $$\Delta_{pp} = (P_{\text{with}} - P_{\text{base}}) \times 100$$
+            <p class="text-[10px] text-slate-400 mt-2">Expressed directly in percentage points.</p>
+          </div>
+        </div>
+
+        <div class="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-xs text-amber-200">
+          <strong>⚠️ Safeguard Rule:</strong> Any missing signal passed as <code class="font-mono text-amber-300">np.nan</code> gets stamped with <code class="font-mono text-amber-300">is_imputed = true</code>. Missing signals are strictly filtered out and <strong>banned</strong> from appearing in the employee's <em>Top Risk Drivers</em> or <em>Top Protective Factors</em> lists!
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Probability Calibration & Risk Thresholds -->
+    <section class="glass-card p-6 md:p-8 mb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">5</div>
+        <h2 class="text-2xl font-bold text-white">Risk Percentages ($Resign\%$) & Risk Tiers</h2>
+      </div>
+
+      <div class="space-y-6 text-sm text-slate-300">
+        <p>
+          Uncalibrated decision trees push raw probabilities toward binary extremes ($0\%$ or $100\%$). Model C uses <strong>Isotonic Regression Calibration (<code class="text-indigo-300">CalibratedClassifierCV</code>)</strong> to map raw outputs into smooth empirical probabilities.
+        </p>
+
+        <!-- Probability Clipping Formula -->
+        <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Probability Clipping Rule</h3>
+          <div class="font-mono text-center text-slate-200 my-2">
+            $$\text{resign\_prob} = \text{clip}(P(\text{calibrated}), 0.05, 0.95)$$
+          </div>
+          <p class="text-xs text-slate-400 text-center">
+            Minimum predicted risk is capped at <strong>5.0%</strong> and maximum risk at <strong>95.0%</strong>.
+          </p>
+        </div>
+
+        <!-- Risk Tier Threshold Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr>
+                <th class="p-3">Risk Tier</th>
+                <th class="p-3">Probability Range</th>
+                <th class="p-3">Threshold Condition</th>
+                <th class="p-3">Action Required</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-700/50">
+              <tr class="bg-emerald-500/5">
+                <td class="p-3 font-bold text-emerald-400 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Low Risk</td>
+                <td class="p-3 font-mono">0.0% to 34.9%</td>
+                <td class="p-3 font-mono text-slate-400">resign_prob &lt; 0.35</td>
+                <td class="p-3 text-slate-300">Standard retention monitoring.</td>
+              </tr>
+              <tr class="bg-amber-500/5">
+                <td class="p-3 font-bold text-amber-400 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Medium Risk</td>
+                <td class="p-3 font-mono">35.0% to 84.9%</td>
+                <td class="p-3 font-mono text-slate-400">0.35 &le; resign_prob &lt; 0.85</td>
+                <td class="p-3 text-slate-300">Proactive check-in & engagement nudges.</td>
+              </tr>
+              <tr class="bg-rose-500/5">
+                <td class="p-3 font-bold text-rose-400 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> High Risk</td>
+                <td class="p-3 font-mono">85.0% to 100.0%</td>
+                <td class="p-3 font-mono text-slate-400">resign_prob &ge; 0.85</td>
+                <td class="p-3 text-slate-300">Immediate retention intervention plan.</td>
+              </tr>
+              <tr class="bg-slate-700/20">
+                <td class="p-3 font-bold text-slate-400 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Insufficient Data</td>
+                <td class="p-3 font-mono text-slate-500">N/A (Null)</td>
+                <td class="p-3 font-mono text-slate-400">signals_provided &lt; 4</td>
+                <td class="p-3 text-slate-300">Collect additional survey signals.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-500 py-6 border-t border-slate-800 mt-12">
+    Trainery AI Workforce Analytics Engine &bull; Version 1.0.0 &bull; Built with FastAPI, XGBoost, and SHAP
+  </footer>
+
+</body>
+</html>

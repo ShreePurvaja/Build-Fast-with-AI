@@ -37,15 +37,27 @@ export default function Home() {
   const [projects, setProjects] = useState([
     {
       id: 'proj_support_01',
-      name: 'Customer Support & Refund Automation',
-      vertical: 'D2C E-commerce',
+      name: 'Omnichannel Customer Support Mega Voice Agent (20 Nodes)',
+      vertical: 'D2C E-commerce & Retail',
       languages: ['ta', 'hi', 'en'],
-      description: 'Automated order verification in SQLite DB and refund processing with human approval gates.',
+      description: '20-node production support agent with VAD, Indic STT, Intent Router, Postgres Order DB, ChromaDB RAG, Llama 3.2 Vision, n8n Action Executor, ElevenLabs TTS, and Barge-In.',
       active_workforces: 1,
       total_executions: 1428,
       success_rate: '99.8%',
       status: 'Active',
       updated_at: 'Just now'
+    },
+    {
+      "id": "proj_interviewer_02",
+      "name": "AI Technical & HR Interviewer Voice Agent (23 Nodes)",
+      "vertical": "HR Tech & Recruitment",
+      "languages": ["en", "hi"],
+      "description": "23-node voice interviewer with Resume PDF parsing, ATS match, Calendly invite, adaptive question loop, DeepSeek R1 scorecard, PDF report, and Greenhouse/Lever ATS sync.",
+      "active_workforces": 1,
+      "total_executions": 856,
+      "success_rate": "99.1%",
+      "status": "Active",
+      "updated_at": "2 hours ago"
     },
     {
       id: 'proj_sales_02',

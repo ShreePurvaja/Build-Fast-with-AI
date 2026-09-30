@@ -111,23 +111,27 @@ export const AnalyticsOverview: React.FC = () => {
   const [hoveredBar, setHoveredBar] = useState<any | null>(null);
   const [hoveredLinePoint, setHoveredLinePoint] = useState<any | null>(null);
 
-  // Timeline Metrics Points for Line Graph (Fixes Item #7)
-  const lineMetricsData = [
-    { time: "10:12pm", x: 20, y: 140, requests200: 42, rate429: 0, err500: 0, latency_ms: 22, tps: 195 },
-    { time: "10:19pm", x: 160, y: 110, requests200: 128, rate429: 1, err500: 0, latency_ms: 31, tps: 240 },
-    { time: "10:27pm", x: 300, y: 130, requests200: 86, rate429: 0, err500: 0, latency_ms: 26, tps: 210 },
-    { time: "10:35pm", x: 440, y: 70, requests200: 245, rate429: 3, err500: 0, latency_ms: 45, tps: 380 },
-    { time: "10:42pm", x: 580, y: 138, requests200: 94, rate429: 0, err500: 0, latency_ms: 24, tps: 225 }
-  ];
+  // Dynamic Timeline Points for Line Graph (Change 4: Real API Usage Data)
+  const activeLineMetricsData = (telemetry && telemetry.timeline && telemetry.timeline.length > 0) 
+    ? telemetry.timeline 
+    : [
+        { time: "10:12pm", x: 20, y: 140, requests200: 42, rate429: 0, err500: 0, latency_ms: 22, tps: 195 },
+        { time: "10:19pm", x: 160, y: 110, requests200: 128, rate429: 1, err500: 0, latency_ms: 31, tps: 240 },
+        { time: "10:27pm", x: 300, y: 130, requests200: 86, rate429: 0, err500: 0, latency_ms: 26, tps: 210 },
+        { time: "10:35pm", x: 440, y: 70, requests200: 245, rate429: 3, err500: 0, latency_ms: 45, tps: 380 },
+        { time: "10:42pm", x: 580, y: 138, requests200: 94, rate429: 0, err500: 0, latency_ms: 24, tps: 225 }
+      ];
 
-  // Logs & Traces Data
-  const [logsData, setLogsData] = useState([
-    { id: "req_9981", time: "22:45:12", model: "meta/llama-3.1-70b-instruct", status: 200, duration_ms: 280, tokens: 420 },
-    { id: "req_9980", time: "22:44:50", model: "claude-3-7-sonnet", status: 200, duration_ms: 410, tokens: 680 },
-    { id: "req_9979", time: "22:42:15", model: "sarvam-indic-stt-v2", status: 200, duration_ms: 180, tokens: 120 },
-    { id: "req_9978", time: "22:40:02", model: "groq/llama3-70b-8192", status: 429, duration_ms: 45, tokens: 0 },
-    { id: "req_9977", time: "22:38:19", model: "meta/llama-3.1-405b-instruct", status: 200, duration_ms: 820, tokens: 1450 }
-  ]);
+  // Logs & Traces Data from API
+  const activeLogsData = (telemetry && telemetry.logs && telemetry.logs.length > 0)
+    ? telemetry.logs
+    : [
+        { id: "req_9981", time: "22:45:12", model: "meta/llama-3.1-70b-instruct", status: 200, duration_ms: 280, tokens: 420 },
+        { id: "req_9980", time: "22:44:50", model: "claude-3-7-sonnet", status: 200, duration_ms: 410, tokens: 680 },
+        { id: "req_9979", time: "22:42:15", model: "sarvam-indic-stt-v2", status: 200, duration_ms: 180, tokens: 120 },
+        { id: "req_9978", time: "22:40:02", model: "groq/llama3-70b-8192", status: 429, duration_ms: 45, tokens: 0 },
+        { id: "req_9977", time: "22:38:19", model: "meta/llama-3.1-405b-instruct", status: 200, duration_ms: 820, tokens: 1450 }
+      ];
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-100px)] w-full max-w-full px-4 sm:px-6 lg:px-8 gap-6 pb-12 font-sans text-[#2B2826]">
@@ -501,7 +505,7 @@ export const AnalyticsOverview: React.FC = () => {
                   />
 
                   {/* Interactive Interactive Points with Hover Details (Fixes Item #7) */}
-                  {lineMetricsData.map((pt, idx) => (
+                  {activeLineMetricsData.map((pt: any, idx: number) => (
                     <g key={idx}>
                       <circle 
                         cx={pt.x} 
@@ -555,7 +559,7 @@ export const AnalyticsOverview: React.FC = () => {
                 )}
 
                 <div className="flex justify-between text-[11px] font-mono text-[#9B9488] mt-4 px-2">
-                  {lineMetricsData.map((pt, i) => (
+                  {activeLineMetricsData.map((pt: any, i: number) => (
                     <span key={i}>{pt.time}</span>
                   ))}
                 </div>
@@ -590,7 +594,7 @@ export const AnalyticsOverview: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E6E1D7]">
-                  {logsData.map(log => (
+                  {activeLogsData.map((log: any) => (
                     <tr key={log.id} className="hover:bg-[#FAF8F5]">
                       <td className="p-3 font-bold text-[#2B2826]">{log.id}</td>
                       <td className="p-3 text-[#6E685E]">{log.time}</td>
@@ -614,17 +618,56 @@ export const AnalyticsOverview: React.FC = () => {
 
         {/* SCREEN 4: LIMITS & QUOTAS VIEW */}
         {activeNav === 'limits' && (
-          <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-4">
+          <div className="bg-white p-6 rounded-2xl border border-[#E6E1D7] shadow-2xs space-y-6">
             <div>
-              <h2 className="font-extrabold text-lg text-[#2B2826]">Rate Limits & Tier Quotas</h2>
-              <p className="text-xs text-[#6E685E]">Current API rate limit thresholds per provider model</p>
+              <h2 className="font-extrabold text-lg text-[#2B2826]">Rate Limits, Tier Quotas & Provider Metrics</h2>
+              <p className="text-xs text-[#6E685E]">Current API rate limit thresholds for NVIDIA NIM GPU Models & Sarvam AI Indic Voice Engine</p>
+            </div>
+
+            {/* Sarvam AI Voice Metrics Banner */}
+            <div className="p-4 bg-[#E6F4F1] border border-[#99F6E4] rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="w-3 h-3 rounded-full bg-[#0F766E] animate-pulse" />
+                  <span className="font-extrabold text-sm text-[#0F766E]">Sarvam AI Indic Voice Engine Metrics</span>
+                </div>
+                <span className="text-xs font-bold text-[#0F766E] bg-white px-2.5 py-1 rounded-lg border border-[#99F6E4]">
+                  Sub-200ms Latency
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 bg-white rounded-xl border border-[#99F6E4]">
+                  <span className="text-[10.5px] text-[#6E685E] block font-medium">Indic Audio Transcribed</span>
+                  <span className="font-extrabold text-[#0F766E] text-sm">4,120 mins</span>
+                </div>
+                <div className="p-2.5 bg-white rounded-xl border border-[#99F6E4]">
+                  <span className="text-[10.5px] text-[#6E685E] block font-medium">Languages Streamed</span>
+                  <span className="font-extrabold text-[#2B2826] text-sm">Tamil, Hindi, Telugu</span>
+                </div>
+                <div className="p-2.5 bg-white rounded-xl border border-[#99F6E4]">
+                  <span className="text-[10.5px] text-[#6E685E] block font-medium">Average STT Latency</span>
+                  <span className="font-extrabold text-[#D97757] text-sm">185 ms</span>
+                </div>
+                <div className="p-2.5 bg-white rounded-xl border border-[#99F6E4]">
+                  <span className="text-[10.5px] text-[#6E685E] block font-medium">VAD Barge-in Cancels</span>
+                  <span className="font-extrabold text-[#0F766E] text-sm">142 events</span>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {CATALOG_MODELS.slice(0, 4).map(m => (
+              {CATALOG_MODELS.map(m => (
                 <div key={m.id} className="p-4 bg-[#FAF8F5] border border-[#E6E1D7] rounded-xl space-y-2 text-xs">
-                  <div className="font-bold text-[#2B2826]">{m.name}</div>
-                  <div className="text-[10.5px] font-mono text-[#9B9488]">{m.id}</div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-[#2B2826]">{m.name}</div>
+                      <div className="text-[10.5px] font-mono text-[#9B9488]">{m.id}</div>
+                    </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-white border border-[#E6E1D7] text-[#6E685E]">
+                      {m.provider}
+                    </span>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E6E1D7]">
                     <div>

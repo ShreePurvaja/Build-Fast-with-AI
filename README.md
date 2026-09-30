@@ -22,11 +22,10 @@ Navigate to the `backend` directory and start the Uvicorn server:
 ```bash
 cd backend
 
-# Option A: Install dependencies and run using Uvicorn
-pip install -r requirements.txt
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Sync dependencies using uv
+uv sync
 
-# Option B: Run directly using uv
+# Run the FastAPI backend server using uv
 uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 

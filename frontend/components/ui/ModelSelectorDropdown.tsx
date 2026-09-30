@@ -30,6 +30,34 @@ export interface ModelDetail {
 }
 
 export const CATALOG_MODELS: ModelDetail[] = [
+  // Sarvam AI Indic Voice Models
+  {
+    id: 'sarvam/sarvam-stt-indic',
+    name: 'Sarvam AI Streaming STT (Indic Voice)',
+    provider: 'Sarvam AI',
+    category: 'Sarvam AI (Indic Voice & Audio)',
+    requests_per_min: '120 / min',
+    requests_per_day: '10,000 / day',
+    tokens_per_min: '50.0K audio/min',
+    tokens_per_day: '3.0M audio/day',
+    release_stage: 'Production',
+    release_date: 'Active Live 2026',
+    description: 'Real-time Indic speech-to-text with auto code-switching for Tamil, Hindi, Telugu, Kannada, and Indian English.'
+  },
+  {
+    id: 'sarvam/sarvam-tts-indic',
+    name: 'Sarvam AI Neural TTS (Indic Voice)',
+    provider: 'Sarvam AI',
+    category: 'Sarvam AI (Indic Voice & Audio)',
+    requests_per_min: '120 / min',
+    requests_per_day: '10,000 / day',
+    tokens_per_min: '50.0K audio/min',
+    tokens_per_day: '3.0M audio/day',
+    release_stage: 'Production',
+    release_date: 'Active Live 2026',
+    description: 'High-fidelity streaming text-to-speech engine supporting natural Indian regional accents.'
+  },
+
   // Live Active NVIDIA NIM Models
   {
     id: 'meta/llama-3.2-11b-vision-instruct',
