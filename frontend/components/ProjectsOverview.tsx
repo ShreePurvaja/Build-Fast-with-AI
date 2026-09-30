@@ -31,12 +31,14 @@ interface Project {
 interface ProjectsOverviewProps {
   projects: Project[];
   onOpenCanvas: (proj: Project) => void;
+  onOpenWorkflowDashboard?: (proj: Project) => void;
   onCreateProject: (newProj: any) => void;
 }
 
 export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({ 
   projects, 
   onOpenCanvas, 
+  onOpenWorkflowDashboard,
   onCreateProject 
 }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -262,8 +264,9 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
         {filteredProjects.map(proj => (
           <div 
             key={proj.id}
-            onClick={() => onOpenCanvas(proj)}
+            onClick={() => onOpenWorkflowDashboard ? onOpenWorkflowDashboard(proj) : onOpenCanvas(proj)}
             className="bg-white p-4 rounded-2xl border border-[#E6E1D7] hover:border-[#D97757] transition-all shadow-2xs cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+            title="Click to view dedicated workflow metrics and model costs"
           >
             {/* Left Side Workflow Info */}
             <div className="flex items-center space-x-3.5 overflow-hidden">
@@ -297,13 +300,13 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
                 <span>{proj.status}</span>
               </span>
 
-              {/* Persistent Toggle Switch linked to SQLite DB */}
+              {/* Persistent Toggle Switch linked to MongoDB Atlas */}
               <button 
                 onClick={(e) => handleToggleStatus(proj.id, e)}
                 className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
                   proj.status === 'Active' ? 'bg-[#10B981]' : 'bg-[#D6CFBF]'
                 }`}
-                title="Toggle Workflow Active Status in Database"
+                title="Toggle Workflow Active Status in MongoDB Atlas"
               >
                 <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-xs ${
                   proj.status === 'Active' ? 'translate-x-4' : 'translate-x-0'
@@ -315,10 +318,11 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
                   e.stopPropagation();
                   onOpenCanvas(proj);
                 }}
-                className="p-1.5 text-[#9B9488] hover:text-[#D97757] rounded-lg hover:bg-[#FAF8F5] transition-colors"
-                title="Open Canvas Studio"
+                className="px-2.5 py-1 text-xs font-bold text-[#6E685E] hover:text-[#D97757] rounded-lg hover:bg-[#FAF8F5] border border-transparent hover:border-[#E6E1D7] transition-all flex items-center gap-1"
+                title="Open directly in Canvas Studio"
               >
-                <ChevronRight className="w-4.5 h-4.5" />
+                <span>Canvas</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

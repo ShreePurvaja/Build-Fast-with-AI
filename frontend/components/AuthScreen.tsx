@@ -192,7 +192,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       : 'http://localhost:8000/api/auth/verify-phone-otp';
 
     const body = otpTarget === 'email' 
-      ? { email, otp: enteredOtp, name: name || email.split('@')[0].title() }
+      ? { email, otp: enteredOtp, name: name || email.split('@')[0] }
       : { phone, otp: enteredOtp, name: name || `User ${phone.slice(-4)}` };
 
     fetch(endpoint, {

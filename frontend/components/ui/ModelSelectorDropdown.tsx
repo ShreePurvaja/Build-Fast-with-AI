@@ -30,10 +30,36 @@ export interface ModelDetail {
 }
 
 export const CATALOG_MODELS: ModelDetail[] = [
-  // NVIDIA NIM Models
+  // Live Active NVIDIA NIM Models
   {
-    id: 'meta/llama-3.1-70b-instruct',
-    name: 'NVIDIA Llama 3.1 70B Instruct',
+    id: 'meta/llama-3.2-11b-vision-instruct',
+    name: 'NVIDIA Llama 3.2 11B Vision Instruct',
+    provider: 'NVIDIA NIM',
+    category: 'NVIDIA NIM (GPU Accelerated)',
+    requests_per_min: '60 / min',
+    requests_per_day: '2,000 / day',
+    tokens_per_min: '30.0K / min',
+    tokens_per_day: '1.2M / day',
+    release_stage: 'Production',
+    release_date: 'Active Live 2026',
+    description: 'High-speed multimodal reasoning model verified live on your NVIDIA NIM GPU cluster.'
+  },
+  {
+    id: 'mistralai/mistral-large-2-instruct',
+    name: 'NVIDIA Mistral Large 2 Instruct',
+    provider: 'NVIDIA NIM',
+    category: 'NVIDIA NIM (GPU Accelerated)',
+    requests_per_min: '30 / min',
+    requests_per_day: '1,000 / day',
+    tokens_per_min: '20.0K / min',
+    tokens_per_day: '600K / day',
+    release_stage: 'Production',
+    release_date: 'Active Live 2026',
+    description: 'Flagship multilingual reasoning model with deep instruction-following capability.'
+  },
+  {
+    id: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    name: 'NVIDIA Llama 3.1 Nemotron 70B',
     provider: 'NVIDIA NIM',
     category: 'NVIDIA NIM (GPU Accelerated)',
     requests_per_min: '30 / min',
@@ -41,8 +67,8 @@ export const CATALOG_MODELS: ModelDetail[] = [
     tokens_per_min: '15.0K / min',
     tokens_per_day: '500K / day',
     release_stage: 'Production',
-    release_date: 'July 23, 2024',
-    description: 'High-speed 70B parameter reasoning model hosted on NVIDIA NIM microservices.'
+    release_date: 'Active Live 2026',
+    description: 'Optimized enterprise alignment model developed by NVIDIA for multi-agent workforces.'
   },
   {
     id: 'meta/llama-3.1-405b-instruct',
