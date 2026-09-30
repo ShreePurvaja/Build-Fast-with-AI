@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'landing' | 'auth' | 'projects' | 'editor' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory';
-  setActiveTab: (tab: 'landing' | 'auth' | 'projects' | 'editor' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory') => void;
+  activeTab: 'landing' | 'auth' | 'projects' | 'editor' | 'workflow-dashboard' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory';
+  setActiveTab: (tab: any) => void;
   user?: { name: string; email: string } | null;
   onOpenCreateProject?: () => void;
   onLogout?: () => void;

@@ -11,6 +11,7 @@ import { EscalationInbox } from '../components/dashboard/EscalationInbox';
 import { KnowledgeBaseManager } from '../components/dashboard/KnowledgeBaseManager';
 import { AnalyticsOverview } from '../components/dashboard/AnalyticsOverview';
 import { MemoryBacklogTable } from '../components/MemoryBacklogTable';
+import { WorkflowDashboard } from '../components/WorkflowDashboard';
 
 interface UserState {
   name: string;
@@ -18,7 +19,12 @@ interface UserState {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('projects');
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'workflow-dashboard' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('projects');
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [user, setUser] = useState<UserState | null>({
     name: 'Alex Morgan',
@@ -125,15 +131,28 @@ export default function Home() {
     setActiveTab('editor');
   };
 
+  const handleOpenWorkflowDashboard = (proj: any) => {
+    setActiveProject(proj);
+    setActiveTab('workflow-dashboard');
+  };
+
   const handleCreateProject = (newProj: any) => {
     setProjects(prev => [newProj, ...prev]);
     setActiveProject(newProj);
-    setActiveTab('editor');
+    setActiveTab('workflow-dashboard');
   };
 
   const handleRunFinished = (newRun: any) => {
     setExecutions(prev => [newRun, ...prev]);
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-[#D97757] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2B2826]">
@@ -180,7 +199,17 @@ export default function Home() {
                 <ProjectsOverview 
                   projects={projects}
                   onOpenCanvas={handleOpenCanvas}
+                  onOpenWorkflowDashboard={handleOpenWorkflowDashboard}
                   onCreateProject={handleCreateProject}
+                />
+              )}
+
+              {/* Dedicated Workflow Dashboard (Metrics, Model Costs, Runs) */}
+              {activeTab === 'workflow-dashboard' && activeProject && (
+                <WorkflowDashboard 
+                  workflow={activeProject}
+                  onOpenCanvas={handleOpenCanvas}
+                  onBackToProjects={() => setActiveTab('projects')}
                 />
               )}
 
@@ -189,7 +218,7 @@ export default function Home() {
                 <WorkflowCanvas 
                   activeProject={activeProject}
                   onRunFinished={handleRunFinished} 
-                  onBackToProjects={() => setActiveTab('projects')}
+                  onBackToProjects={() => setActiveTab('workflow-dashboard')}
                 />
               )}
 

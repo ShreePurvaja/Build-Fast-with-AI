@@ -50,3 +50,9 @@ Desktop.ini
 *.log
 tmp/
 temp/
+
+# Databases
+*.db
+*.db.*
+backend/mongo_data/
+
