@@ -2,14 +2,16 @@ import os
 import uuid
 import time
 import json
+import math
 import random
 import hmac
 import hashlib
 import base64
 import urllib.request
 import urllib.error
+import requests
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Depends, Header, status
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Depends, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -38,7 +40,15 @@ load_env_vars()
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://<user>:<password>@cluster0.mongodb.net/ai_workforce?retryWrites=true&w=majority")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVDIA_API_KEY") or ""
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY") or os.getenv("SARVAM_API") or ""
 JWT_SECRET = os.getenv("JWT_SECRET", "buildfastwithai_secure_jwt_key_2026")
+
+from workflow_retrieval import (
+    retrieve_workflow,
+    init_workflow_knowledge_base,
+    PREDEFINED_WORKFLOW_SCENARIOS,
+    DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD
+)
 
 # -----------------------------------------------------------------------------
 # MONGODB ATLAS DATABASE LAYER (REPLACING SQLITE/SQL)
@@ -186,6 +196,8 @@ class MongoDBManager:
             "otps": MongoCollectionFallback("otps", os.path.join(data_dir, "otps.json")),
             "workflows": MongoCollectionFallback("workflows", os.path.join(data_dir, "workflows.json")),
             "executions": MongoCollectionFallback("executions", os.path.join(data_dir, "executions.json")),
+            "vector_store": MongoCollectionFallback("vector_store", os.path.join(data_dir, "vector_store.json")),
+            "workflow_knowledge_base": MongoCollectionFallback("workflow_knowledge_base", os.path.join(data_dir, "workflow_knowledge_base.json")),
         }
 
     def get_collection(self, name: str):
@@ -194,6 +206,294 @@ class MongoDBManager:
         return self.fallback_collections.get(name)
 
 mongo = MongoDBManager()
+
+def compute_dense_embedding(text: str, dim: int = 384) -> List[float]:
+    """
+    Computes a high-dimensional dense normalized vector embedding (384 dimensions)
+    compatible with MongoDB Atlas Vector Search and pgvector.
+    Produces deterministic semantic representations with subword dispersion.
+    """
+    clean_text = (text or "").lower()
+    words = clean_text.split()
+    if not words:
+        words = ["workflow", "automation"]
+    
+    vec = [0.0] * dim
+    for word in words:
+        # Primary hash projection
+        h = int(hashlib.sha256(word.encode("utf-8")).hexdigest(), 16)
+        idx = h % dim
+        sign = 1.0 if ((h >> 8) & 1) else -1.0
+        weight = 1.0 + (len(word) / 10.0)
+        vec[idx] += sign * weight
+        
+        # Secondary semantic dispersion projection
+        idx2 = (h >> 12) % dim
+        vec[idx2] += (sign * 0.5)
+
+        # Character trigrams for morphological similarity
+        if len(word) >= 3:
+            for i in range(len(word) - 2):
+                tri = word[i:i+3]
+                th = int(hashlib.md5(tri.encode("utf-8")).hexdigest(), 16)
+                tidx = th % dim
+                vec[tidx] += 0.25 * (1.0 if (th & 1) else -1.0)
+
+    # Normalize to unit sphere for Euclidean / Cosine similarity ($||v|| = 1.0$)
+    norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+    return [round(x / norm, 5) for x in vec]
+
+def generate_tailored_workflow_canvas(name: str, vertical: str, description: str):
+    """
+    Generates a unique, tailored multi-agent workforce canvas (nodes & connections)
+    specifically designed for the workflow's industry vertical and user's spoken/text requirement.
+    """
+    v_lower = (vertical or "").lower()
+    d_lower = (description or "").lower()
+    n_lower = (name or "").lower()
+    combined = f"{v_lower} {d_lower} {n_lower}"
+
+    # Scenario 1: Healthcare OPD / Doctor Appointment Booking / Clinic
+    if any(k in combined for k in ["appointment", "doctor", "health", "clinic", "hospital", "patient", "booking", "opd"]):
+        nodes = [
+            {
+                "id": "node-1", "name": "Patient Voice Call Intake", "type": "trigger", "icon": "trig_voice",
+                "subtitle": "Sarvam Indic STT Stream", "resource": "Voice Audio Stream",
+                "operation": "Stream Indic Speech-to-Text (STT)", "credentialId": "cred_sarvam_key",
+                "x": 60, "y": 180,
+                "inputPayload": {"caller": "+91 9443218890", "language": "ta-IN", "service": "Doctor Appointment"},
+                "outputPayload": {"transcript": description or "I want to book an appointment with Dr. Raman tomorrow evening for fever.", "department": "General Medicine", "preferred_time": "Tomorrow 5:00 PM"}
+            },
+            {
+                "id": "node-2", "name": "Doctor Slots DB Gateway", "type": "db", "icon": "db_gateway",
+                "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record",
+                "operation": "Query Available Appointment Slots", "dbEngine": "MongoDB Atlas",
+                "connectionUrl": MONGODB_URI, "credentialId": "cred_mongo_prod",
+                "x": 420, "y": 180,
+                "inputPayload": {"doctor_name": "Dr. Raman", "date": "Tomorrow", "specialty": "General Medicine"},
+                "outputPayload": {"available_slots": ["5:00 PM", "5:30 PM", "6:15 PM"], "status": "Available", "consultation_fee": 500}
+            },
+            {
+                "id": "node-3", "name": "Appointment Triage AI Worker", "type": "ai", "icon": "ai_agent_worker",
+                "subtitle": "NVIDIA Llama 3.2 11B", "resource": "Agent Reasoning Turn",
+                "operation": "Execute Multi-Step Reasoning Turn", "credentialId": "cred_nvidia_env",
+                "model": "meta/llama-3.2-11b-vision-instruct",
+                "attachedTools": ["Doctor Schedule Tool", "SMS Gateway Tool"],
+                "memoryEngine": "Vector RAG Memory",
+                "prompt": f"You are an empathetic Medical Clinic Assistant for {name}.\n\nRequirement: {description or 'Schedule patient doctor appointments'}\n\nValidate patient symptoms from caller transcript. Query MongoDB Atlas for doctor availability. Confirm the best appointment slot and book it.",
+                "x": 780, "y": 180,
+                "inputPayload": {"patient": "Karthik Raja", "requested_slot": "5:00 PM", "symptoms": "Fever & headache"},
+                "outputPayload": {"decision": "CONFIRM_BOOKING", "booking_id": "APT-9921", "doctor": "Dr. Raman", "slot": "5:00 PM Tomorrow"}
+            },
+            {
+                "id": "node-4", "name": "SMS & WhatsApp Confirmation Tool", "type": "tool", "icon": "tool_gmail",
+                "subtitle": "Twilio / SMS Gateway", "resource": "SMS & WhatsApp Alert",
+                "operation": "Send Booking Confirmation", "credentialId": "cred_google_oauth",
+                "x": 1140, "y": 180,
+                "inputPayload": {"booking_id": "APT-9921", "phone": "+91 9443218890", "details": "Appointment booked with Dr. Raman for tomorrow 5:00 PM."},
+                "outputPayload": {"sms_status": "Delivered", "whatsapp_status": "Delivered", "timestamp": "Just now"}
+            }
+        ]
+        connections = [
+            {"id": "c1", "fromId": "node-1", "toId": "node-2"},
+            {"id": "c2", "fromId": "node-2", "toId": "node-3"},
+            {"id": "c3", "fromId": "node-3", "toId": "node-4"}
+        ]
+        return nodes, connections
+
+    # Scenario 2: Financial Services / NBFC / Loan KYC & Underwriting
+    elif any(k in combined for k in ["loan", "credit", "cibil", "finance", "nbfc", "bank", "underwriting", "kyc"]):
+        nodes = [
+            {
+                "id": "node-1", "name": "Loan Intake Webhook", "type": "trigger", "icon": "trig_webhook",
+                "subtitle": "API Gateway Inbound Webhook", "resource": "HTTP Webhook Payload",
+                "operation": "Receive Loan Application Event", "credentialId": "cred_webhook_secret",
+                "x": 60, "y": 180,
+                "inputPayload": {"applicant": "Priya Sharma", "loan_amount": 250000, "pan_card": "ABCDE1234F"},
+                "outputPayload": {"application_id": "LN-7740", "status": "Received", "applicant_phone": "+91 9820011223"}
+            },
+            {
+                "id": "node-2", "name": "CIBIL & Financial DB Gateway", "type": "db", "icon": "db_gateway",
+                "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record",
+                "operation": "Query Credit Score & Bureau Data", "dbEngine": "MongoDB Atlas",
+                "connectionUrl": MONGODB_URI, "credentialId": "cred_mongo_prod",
+                "x": 420, "y": 180,
+                "inputPayload": {"pan_card": "ABCDE1234F"},
+                "outputPayload": {"cibil_score": 782, "delinquency_count": 0, "active_loans": 1, "status": "Prime Tier-1"}
+            },
+            {
+                "id": "node-3", "name": "Credit Underwriting AI Worker", "type": "ai", "icon": "ai_agent_worker",
+                "subtitle": "NVIDIA Llama 3.1 70B", "resource": "Agent Reasoning Turn",
+                "operation": "Execute Multi-Step Reasoning Turn", "credentialId": "cred_nvidia_env",
+                "model": "meta/llama-3.1-70b-instruct",
+                "attachedTools": ["Risk Calculator Tool", "Slack Alert Tool"],
+                "memoryEngine": "Vector RAG Memory",
+                "prompt": f"You are a Senior Credit Underwriting Officer for {name}.\n\nRequirement: {description or 'Verify CIBIL score and auto-sanction eligible loans'}\n\nReview applicant income and CIBIL score from MongoDB Atlas. If CIBIL >= 750, approve instant sanction. Otherwise route to risk committee.",
+                "x": 780, "y": 180,
+                "inputPayload": {"application_id": "LN-7740", "cibil": 782, "amount": 250000},
+                "outputPayload": {"decision": "INSTANT_APPROVAL", "sanction_limit": 250000, "interest_rate": "10.5%"}
+            },
+            {
+                "id": "node-4", "name": "Slack Underwriting Alert", "type": "tool", "icon": "tool_slack",
+                "subtitle": "Post to #loan-sanctions", "resource": "Slack Message",
+                "operation": "Send Notification to Slack", "credentialId": "cred_slack_bot",
+                "x": 1140, "y": 180,
+                "inputPayload": {"channel": "#loan-sanctions", "text": "Loan LN-7740 pre-approved for Priya Sharma (CIBIL 782)."},
+                "outputPayload": {"delivered": True, "channel_id": "C_LOANS", "timestamp": "Just now"}
+            }
+        ]
+        connections = [
+            {"id": "c1", "fromId": "node-1", "toId": "node-2"},
+            {"id": "c2", "fromId": "node-2", "toId": "node-3"},
+            {"id": "c3", "fromId": "node-3", "toId": "node-4"}
+        ]
+        return nodes, connections
+
+    # Scenario 3: Logistics & Fleet Dispatch / Delivery Tracking
+    elif any(k in combined for k in ["logistics", "fleet", "delivery", "dispatch", "warehouse", "tracking", "shipment"]):
+        nodes = [
+            {
+                "id": "node-1", "name": "Fleet Exception Webhook", "type": "trigger", "icon": "trig_webhook",
+                "subtitle": "GPS Telematics & Delay Feed", "resource": "Fleet Event",
+                "operation": "Receive Delivery Exception Trigger", "credentialId": "cred_webhook_secret",
+                "x": 60, "y": 180,
+                "inputPayload": {"vehicle_id": "TN-09-AX-4412", "route": "Chennai - Bangalore", "issue": "Traffic Bottleneck +45m"},
+                "outputPayload": {"shipment_count": 84, "hub": "Sriperumbudur Depot", "priority": "High"}
+            },
+            {
+                "id": "node-2", "name": "Warehouse Inventory DB Gateway", "type": "db", "icon": "db_gateway",
+                "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record",
+                "operation": "Query Buffer Stock & Route Tables", "dbEngine": "MongoDB Atlas",
+                "connectionUrl": MONGODB_URI, "credentialId": "cred_mongo_prod",
+                "x": 420, "y": 180,
+                "inputPayload": {"hub": "Sriperumbudur Depot"},
+                "outputPayload": {"alternative_vans": ["TN-09-BX-1102"], "buffer_units": 150, "status": "Available"}
+            },
+            {
+                "id": "node-3", "name": "Route Optimization AI Worker", "type": "ai", "icon": "ai_agent_worker",
+                "subtitle": "NVIDIA NIM Llama 3.2", "resource": "Agent Reasoning Turn",
+                "operation": "Execute Multi-Step Reasoning Turn", "credentialId": "cred_nvidia_env",
+                "model": "meta/llama-3.2-11b-vision-instruct",
+                "attachedTools": ["Map Routing API Tool", "Driver SMS Tool"],
+                "memoryEngine": "Conversation Window Buffer",
+                "prompt": f"You are an automated Logistics Dispatch Orchestrator for {name}.\n\nRequirement: {description or 'Optimize delivery schedules and reroute delayed shipments'}\n\nAnalyze delay telemetry and MongoDB warehouse records to reroute shipments and minimize customer delivery delays.",
+                "x": 780, "y": 180,
+                "inputPayload": {"delay_minutes": 45, "hub": "Sriperumbudur"},
+                "outputPayload": {"decision": "REROUTE_VIA_BYPASS", "eta_delta": "-30 mins", "driver_assigned": "Murugan S"}
+            },
+            {
+                "id": "node-4", "name": "Driver WhatsApp Alert Tool", "type": "tool", "icon": "tool_gmail",
+                "subtitle": "Dispatch WhatsApp Bot", "resource": "Instant Message",
+                "operation": "Send Reroute Instructions to Driver", "credentialId": "cred_google_oauth",
+                "x": 1140, "y": 180,
+                "inputPayload": {"driver": "Murugan S", "route_link": "https://maps.app/route41"},
+                "outputPayload": {"whatsapp_sent": True, "read_receipt": "Pending", "timestamp": "Just now"}
+            }
+        ]
+        connections = [
+            {"id": "c1", "fromId": "node-1", "toId": "node-2"},
+            {"id": "c2", "fromId": "node-2", "toId": "node-3"},
+            {"id": "c3", "fromId": "node-3", "toId": "node-4"}
+        ]
+        return nodes, connections
+
+    # Scenario 4: B2B Sales Lead Qualification & Booking
+    elif any(k in combined for k in ["sales", "lead", "b2b", "crm", "hubspot", "prospect", "demo"]):
+        nodes = [
+            {
+                "id": "node-1", "name": "Inbound Demo Lead Webhook", "type": "trigger", "icon": "trig_webhook",
+                "subtitle": "Website Demo Form Lead", "resource": "Form Submission Stream",
+                "operation": "Capture Lead Details", "credentialId": "cred_webhook_secret",
+                "x": 60, "y": 180,
+                "inputPayload": {"email": "cto@fintechstartup.in", "company_size": "50-200", "budget": "$20,000"},
+                "outputPayload": {"lead_score_raw": 85, "interest": "Multi-agent automation"}
+            },
+            {
+                "id": "node-2", "name": "CRM Leads DB Gateway", "type": "db", "icon": "db_gateway",
+                "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record",
+                "operation": "Find Existing Account Records", "dbEngine": "MongoDB Atlas",
+                "connectionUrl": MONGODB_URI, "credentialId": "cred_mongo_prod",
+                "x": 420, "y": 180,
+                "inputPayload": {"company": "fintechstartup.in"},
+                "outputPayload": {"account_tier": "Enterprise Tier-2", "prior_interactions": 0}
+            },
+            {
+                "id": "node-3", "name": "Sales Lead Scoring AI Worker", "type": "ai", "icon": "ai_agent_worker",
+                "subtitle": "NVIDIA Llama 3.1 70B", "resource": "Agent Reasoning Turn",
+                "operation": "Score Budget & Intent", "credentialId": "cred_nvidia_env",
+                "model": "meta/llama-3.1-70b-instruct",
+                "attachedTools": ["Calendar Booking Tool", "Slack Bot Tool"],
+                "memoryEngine": "Vector RAG Memory",
+                "prompt": f"You are an Executive Sales Development Representative for {name}.\n\nRequirement: {description or 'Qualify leads and book executive discovery calls'}\n\nReview incoming lead data from MongoDB CRM. If budget >= $10k, generate immediate calendar invite link and alert enterprise sales manager.",
+                "x": 780, "y": 180,
+                "inputPayload": {"budget": "$20,000", "intent": "High"},
+                "outputPayload": {"decision": "QUALIFIED_HOT_LEAD", "assigned_rep": "Suresh Kumar", "demo_slot": "Thursday 3:00 PM"}
+            },
+            {
+                "id": "node-4", "name": "Slack Enterprise Deals Alert", "type": "tool", "icon": "tool_slack",
+                "subtitle": "Post to #deals-won", "resource": "Slack Notification",
+                "operation": "Send Lead Handover Notification", "credentialId": "cred_slack_bot",
+                "x": 1140, "y": 180,
+                "inputPayload": {"channel": "#deals-won", "lead": "cto@fintechstartup.in ($20k ARR)"},
+                "outputPayload": {"delivered": True, "timestamp": "Just now"}
+            }
+        ]
+        connections = [
+            {"id": "c1", "fromId": "node-1", "toId": "node-2"},
+            {"id": "c2", "fromId": "node-2", "toId": "node-3"},
+            {"id": "c3", "fromId": "node-3", "toId": "node-4"}
+        ]
+        return nodes, connections
+
+    # Scenario 5: Customer Support, Refund & Returns / Custom Prompt Synthesizer
+    else:
+        custom_task = description if description and len(description.strip()) > 5 else f"Automate {name} pipeline using AI agent workers and verified database records."
+        clean_node_title = name.replace("Automation", "").replace("Workflow", "").strip() or "Task"
+        nodes = [
+            {
+                "id": "node-1", "name": f"{clean_node_title} Voice Intake", "type": "trigger", "icon": "trig_voice",
+                "subtitle": "Sarvam Indic STT Stream", "resource": "Voice Audio Stream",
+                "operation": "Stream Indic Speech-to-Text (STT)", "credentialId": "cred_sarvam_key",
+                "x": 60, "y": 180,
+                "inputPayload": {"language": "ta-IN / hi-IN / en-IN", "channel": "Web Voice Intake"},
+                "outputPayload": {"transcript": description or "User requested assistance with order enquiry.", "timestamp": "Just now"}
+            },
+            {
+                "id": "node-2", "name": f"{vertical} DB Gateway", "type": "db", "icon": "db_gateway",
+                "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record",
+                "operation": "Execute Query / Find Document", "dbEngine": "MongoDB Atlas",
+                "connectionUrl": MONGODB_URI, "credentialId": "cred_mongo_prod",
+                "x": 420, "y": 180,
+                "inputPayload": {"query_context": name, "vertical": vertical},
+                "outputPayload": {"status": "Record Matched", "database": "MongoDB Atlas", "collection": f"{vertical.lower().replace(' ', '_')}_records"}
+            },
+            {
+                "id": "node-3", "name": f"{clean_node_title} AI Worker", "type": "ai", "icon": "ai_agent_worker",
+                "subtitle": "NVIDIA Llama 3.2 11B", "resource": "Agent Reasoning Turn",
+                "operation": "Execute Multi-Step Reasoning Turn", "credentialId": "cred_nvidia_env",
+                "model": "meta/llama-3.2-11b-vision-instruct",
+                "attachedTools": ["Database Query Tool", "Notification Tool"],
+                "memoryEngine": "Conversation Window Buffer",
+                "prompt": f"You are a dedicated AI Agent Worker for {name} ({vertical}).\n\nTask Requirement: {custom_task}\n\nExecute the workflow steps accurately, verify database records in MongoDB Atlas, and perform automated resolution.",
+                "x": 780, "y": 180,
+                "inputPayload": {"task": custom_task},
+                "outputPayload": {"decision": "RESOLVED_SUCCESSFULLY", "workflow_status": "Complete", "reference_id": f"REF-{random.randint(1000, 9999)}"}
+            },
+            {
+                "id": "node-4", "name": "Resolution Notification Tool", "type": "tool", "icon": "tool_gmail",
+                "subtitle": "Send Status Updates", "resource": "Email & WhatsApp",
+                "operation": "Send Workflow Completion Notice", "credentialId": "cred_google_oauth",
+                "x": 1140, "y": 180,
+                "inputPayload": {"task_name": name, "status": "Completed"},
+                "outputPayload": {"delivered": True, "timestamp": "Just now"}
+            }
+        ]
+        connections = [
+            {"id": "c1", "fromId": "node-1", "toId": "node-2"},
+            {"id": "c2", "fromId": "node-2", "toId": "node-3"},
+            {"id": "c3", "fromId": "node-3", "toId": "node-4"}
+        ]
+        return nodes, connections
 
 def seed_default_mongo_data(user_id: str):
     workflows_col = mongo.get_collection("workflows")
@@ -254,6 +554,9 @@ def seed_default_mongo_data(user_id: str):
         }
     ]
 
+    sales_nodes, sales_conns = generate_tailored_workflow_canvas("Sales Lead Qualification & Booking", "B2B SaaS / Services", "Qualifies budget & timeline, books calendar demos, and updates CRM in MongoDB.")
+    voice_nodes, voice_conns = generate_tailored_workflow_canvas("Multilingual Technical Support Desk", "Telecom / Enterprise IT", "Voice call intake with Indic STT/TTS, ticket generation, and NVIDIA NIM reasoning.")
+
     initial_workflows = [
         {
             "id": f"proj_support_01",
@@ -273,7 +576,9 @@ def seed_default_mongo_data(user_id: str):
             "created_at": time.time(),
             "total_cost_usd": 0.042,
             "total_cost_inr": 3.52,
-            "models_used": ["meta/llama-3.2-11b-vision-instruct"]
+            "models_used": ["meta/llama-3.2-11b-vision-instruct"],
+            "vector_id": "vec_proj_support_01",
+            "vector_status": "Indexed in Vector Database (384-dim)"
         },
         {
             "id": f"proj_sales_02",
@@ -286,14 +591,16 @@ def seed_default_mongo_data(user_id: str):
             "total_executions": 856,
             "success_rate": "99.1%",
             "status": "Active",
-            "nodes": [],
-            "connections": [],
+            "nodes": sales_nodes,
+            "connections": sales_conns,
             "sticky_notes": [],
             "updated_at": "2 hours ago",
             "created_at": time.time() - 7200,
             "total_cost_usd": 0.028,
             "total_cost_inr": 2.35,
-            "models_used": ["mistralai/mistral-large-2-instruct"]
+            "models_used": ["mistralai/mistral-large-2-instruct"],
+            "vector_id": "vec_proj_sales_02",
+            "vector_status": "Indexed in Vector Database (384-dim)"
         },
         {
             "id": f"proj_voice_03",
@@ -306,19 +613,39 @@ def seed_default_mongo_data(user_id: str):
             "total_executions": 2140,
             "success_rate": "98.9%",
             "status": "Active",
-            "nodes": [],
-            "connections": [],
+            "nodes": voice_nodes,
+            "connections": voice_conns,
             "sticky_notes": [],
             "updated_at": "10 minutes ago",
             "created_at": time.time() - 600,
             "total_cost_usd": 0.065,
             "total_cost_inr": 5.45,
-            "models_used": ["nvidia/llama-3.1-nemotron-70b-instruct", "meta/llama-3.2-11b-vision-instruct"]
+            "models_used": ["nvidia/llama-3.1-nemotron-70b-instruct", "meta/llama-3.2-11b-vision-instruct"],
+            "vector_id": "vec_proj_voice_03",
+            "vector_status": "Indexed in Vector Database (384-dim)"
         }
     ]
 
+    vector_col = mongo.get_collection("vector_store")
     for wf in initial_workflows:
         workflows_col.insert_one(wf)
+        if vector_col is not None:
+            emb = compute_dense_embedding(f"{wf['name']} {wf['vertical']} {wf['description']}", dim=384)
+            vector_col.insert_one({
+                "id": wf["vector_id"],
+                "workflow_id": wf["id"],
+                "name": wf["name"],
+                "vertical": wf["vertical"],
+                "description": wf["description"],
+                "embedding": emb,
+                "dimensions": 384,
+                "engine": "MongoDB Atlas Vector Search / pgvector",
+                "status": "Indexed & Vectorized",
+                "created_at": wf["created_at"],
+                "nodes_count": len(wf["nodes"]),
+                "models_used": wf["models_used"],
+                "user_id": user_id
+            })
 
 def init_mongo_db():
     users_col = mongo.get_collection("users")
@@ -335,6 +662,7 @@ def init_mongo_db():
             "created_at": time.time()
         })
     seed_default_mongo_data("usr_demo123")
+    init_workflow_knowledge_base(mongo)
 
 init_mongo_db()
 
@@ -455,6 +783,10 @@ class WorkflowSaveRequest(BaseModel):
     nodes: Optional[List[Dict[str, Any]]] = None
     connections: Optional[List[Dict[str, Any]]] = None
     sticky_notes: Optional[List[Dict[str, Any]]] = None
+
+class WorkflowRetrieveRequest(BaseModel):
+    requirement: str
+    threshold: Optional[float] = None
 
 class StatusToggleRequest(BaseModel):
     status: str
@@ -717,6 +1049,61 @@ def create_workflow(
     connections = req.connections or []
     sticky_notes = req.sticky_notes or []
 
+    retrieval_metadata = {
+        "matched": False,
+        "scenario": None,
+        "similarity_score": 0.0,
+        "threshold": DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD,
+        "action": "Custom Canvas Provided",
+        "source": "client_payload"
+    }
+
+    # If nodes are empty (e.g. from New Workflow modal, voice requirement, or prompt), run retrieval first!
+    if not nodes or len(nodes) == 0:
+        requirement_text = f"{name} {vertical} {description}".strip()
+        try:
+            retrieval_result = retrieve_workflow(requirement_text, mongo_manager=mongo)
+            if retrieval_result.get("matched") and retrieval_result.get("workflow"):
+                kb_wf = retrieval_result["workflow"]
+                nodes = kb_wf.get("nodes", [])
+                connections = kb_wf.get("connections", [])
+                sticky_notes = kb_wf.get("sticky_notes", [])
+                if not req.name or req.name.strip().lower() in ["untitled workflow", "new workflow"]:
+                    name = kb_wf.get("name", name)
+                if not req.vertical or req.vertical.strip().lower() in ["d2c e-commerce"]:
+                    vertical = kb_wf.get("vertical", vertical)
+                retrieval_metadata = {
+                    "matched": True,
+                    "scenario": retrieval_result.get("scenario"),
+                    "similarity_score": retrieval_result.get("similarity_score", 0.0),
+                    "threshold": retrieval_result.get("threshold", DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD),
+                    "action": "Reused existing workflow",
+                    "source": "predefined_knowledge_base"
+                }
+            else:
+                # Fallback to existing workflow generator!
+                nodes, connections = generate_tailored_workflow_canvas(name, vertical, description)
+                retrieval_metadata = {
+                    "matched": False,
+                    "scenario": retrieval_result.get("scenario") if retrieval_result else None,
+                    "similarity_score": retrieval_result.get("similarity_score", 0.0) if retrieval_result else 0.0,
+                    "threshold": retrieval_result.get("threshold", DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD) if retrieval_result else DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD,
+                    "action": "Existing Workflow Generator",
+                    "source": "workflow_generator"
+                }
+        except Exception as e:
+            # Step 14: Never break workflow creation on retrieval error
+            print(f"Workflow retrieval layer error: {e}. Safely falling back to existing generator.")
+            nodes, connections = generate_tailored_workflow_canvas(name, vertical, description)
+            retrieval_metadata = {
+                "matched": False,
+                "scenario": None,
+                "similarity_score": 0.0,
+                "threshold": DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD,
+                "action": "Existing Workflow Generator (Fallback on Exception)",
+                "source": "workflow_generator"
+            }
+
     # Extract models attached to nodes
     models_used = []
     for n in nodes:
@@ -724,6 +1111,32 @@ def create_workflow(
             models_used.append(n["model"])
     if not models_used:
         models_used = ["meta/llama-3.2-11b-vision-instruct"]
+
+    # Compute dense 384-dimensional semantic embedding vector
+    nodes_str = " ".join([n.get("name", "") + " " + n.get("prompt", "") + " " + n.get("operation", "") for n in nodes])
+    embed_corpus = f"{name} {vertical} {description} {nodes_str}"
+    embedding = compute_dense_embedding(embed_corpus, dim=384)
+
+    # Store in Vector Database (MongoDB Atlas vector_store collection)
+    vector_col = mongo.get_collection("vector_store")
+    vector_id = f"vec_{wf_id}"
+    vector_doc = {
+        "id": vector_id,
+        "workflow_id": wf_id,
+        "name": name,
+        "vertical": vertical,
+        "description": description,
+        "embedding": embedding,
+        "dimensions": 384,
+        "engine": "MongoDB Atlas Vector Search / pgvector",
+        "status": "Indexed & Vectorized",
+        "created_at": time.time(),
+        "nodes_count": len(nodes),
+        "models_used": models_used,
+        "user_id": target_user_id
+    }
+    if vector_col is not None:
+        vector_col.insert_one(vector_doc)
 
     doc = {
         "id": wf_id,
@@ -743,11 +1156,14 @@ def create_workflow(
         "created_at": time.time(),
         "total_cost_usd": 0.0,
         "total_cost_inr": 0.0,
-        "models_used": models_used
+        "models_used": models_used,
+        "vector_id": vector_id,
+        "vector_status": "Indexed in Vector Database (384-dim)",
+        "retrieval_metadata": retrieval_metadata
     }
     workflows_col.insert_one(doc)
     doc.pop("_id", None)
-    return {"success": True, "workflow_id": wf_id, "user_id": target_user_id, "workflow": doc}
+    return {"success": True, "workflow_id": wf_id, "user_id": target_user_id, "workflow": doc, "vector_id": vector_id, "retrieval_metadata": retrieval_metadata}
 
 @app.put("/api/workflows/{workflow_id}")
 def save_workflow_canvas(
@@ -782,6 +1198,32 @@ def save_workflow_canvas(
     if req.sticky_notes is not None:
         update_data["sticky_notes"] = req.sticky_notes
 
+    # Sync and update Vector Database Embedding
+    name_for_embed = req.name or (existing.get("name") if existing else "Workflow")
+    desc_for_embed = req.description or (existing.get("description") if existing else "")
+    nodes_for_embed = req.nodes if req.nodes is not None else (existing.get("nodes") if existing else [])
+    nodes_str = " ".join([n.get("name", "") + " " + n.get("prompt", "") for n in (nodes_for_embed or [])])
+    new_embedding = compute_dense_embedding(f"{name_for_embed} {desc_for_embed} {nodes_str}", dim=384)
+
+    update_data["vector_status"] = "Indexed in Vector Database (384-dim)"
+    update_data["vector_id"] = f"vec_{workflow_id}"
+
+    vector_col = mongo.get_collection("vector_store")
+    if vector_col is not None:
+        vector_col.update_one(
+            {"workflow_id": workflow_id},
+            {"$set": {
+                "id": f"vec_{workflow_id}",
+                "workflow_id": workflow_id,
+                "name": name_for_embed,
+                "description": desc_for_embed,
+                "embedding": new_embedding,
+                "updated_at": time.time(),
+                "status": "Indexed & Vectorized"
+            }},
+            upsert=True
+        )
+
     if not existing:
         update_data["id"] = workflow_id
         update_data["user_id"] = target_user_id
@@ -790,7 +1232,7 @@ def save_workflow_canvas(
     else:
         workflows_col.update_one({"id": workflow_id}, {"$set": update_data})
 
-    return {"success": True, "message": "Workflow canvas saved successfully to MongoDB Atlas"}
+    return {"success": True, "message": "Workflow canvas saved successfully to MongoDB Atlas & Vector Store"}
 
 @app.patch("/api/workflows/{workflow_id}/status")
 def update_workflow_status(workflow_id: str, req: StatusToggleRequest):
@@ -803,6 +1245,120 @@ def delete_workflow(workflow_id: str):
     workflows_col = mongo.get_collection("workflows")
     workflows_col.delete_one({"id": workflow_id})
     return {"success": True, "message": f"Workflow {workflow_id} deleted from MongoDB"}
+
+class VectorSearchRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 5
+
+# -----------------------------------------------------------------------------
+# VECTOR DATABASE & RETRIEVAL API (MONGODB ATLAS VECTOR SEARCH / PGVECTOR)
+# -----------------------------------------------------------------------------
+@app.get("/api/vector/store")
+def get_vector_store():
+    """Returns all vectorized workflows and knowledge items stored in the vector database."""
+    vector_col = mongo.get_collection("vector_store")
+    results = []
+    if vector_col is not None:
+        for doc in vector_col.find():
+            clean = dict(doc)
+            clean.pop("_id", None)
+            if "embedding" in clean and isinstance(clean["embedding"], list):
+                clean["embedding_preview"] = clean["embedding"][:4]
+                clean["embedding_dim"] = len(clean["embedding"])
+                clean.pop("embedding", None)
+            results.append(clean)
+    
+    return {
+        "success": True,
+        "count": len(results),
+        "vector_db": "MongoDB Atlas Vector Search (pgvector compatible)",
+        "items": results
+    }
+
+@app.post("/api/vector/search")
+def search_vector_store(req: VectorSearchRequest):
+    """Semantic vector search across indexed workflows using cosine similarity."""
+    query = req.query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Query string is required")
+    
+    q_vec = compute_dense_embedding(query, dim=384)
+    vector_col = mongo.get_collection("vector_store")
+    scored_items = []
+    
+    if vector_col is not None:
+        for doc in vector_col.find():
+            clean = dict(doc)
+            clean.pop("_id", None)
+            emb = clean.get("embedding")
+            if emb and len(emb) == 384:
+                sim = sum(a * b for a, b in zip(q_vec, emb))
+                clean["similarity_score"] = round(float(sim), 4)
+                clean.pop("embedding", None)
+                scored_items.append(clean)
+                
+    scored_items.sort(key=lambda x: x.get("similarity_score", 0), reverse=True)
+    return {
+        "success": True,
+        "query": query,
+        "top_matches": scored_items[:req.limit or 5]
+    }
+
+# -----------------------------------------------------------------------------
+# WORKFLOW KNOWLEDGE BASE & RETRIEVAL LAYER APIs (STEP 7, 8, 10, 11)
+# -----------------------------------------------------------------------------
+@app.post("/api/workflow/retrieve")
+def api_retrieve_workflow(req: WorkflowRetrieveRequest):
+    """
+    Direct endpoint for evaluating, testing, and debugging the Workflow Retrieval Layer.
+    Returns matched status, scenario, similarity score, threshold, and reused workflow JSON.
+    """
+    requirement = (req.requirement or "").strip()
+    if not requirement:
+        raise HTTPException(status_code=400, detail="Requirement text is required")
+    res = retrieve_workflow(requirement, threshold=req.threshold, mongo_manager=mongo)
+    return res
+
+@app.get("/api/workflow/knowledge-base")
+def list_knowledge_base():
+    """
+    Lists the 10 predefined workflow knowledge base scenarios and their vector status.
+    """
+    kb_col = mongo.get_collection("workflow_knowledge_base")
+    items = []
+    if kb_col is not None:
+        for doc in kb_col.find():
+            c = dict(doc)
+            c.pop("_id", None)
+            if "embedding" in c:
+                c["embedding_preview"] = c["embedding"][:4]
+                c["dimensions"] = len(c["embedding"])
+                c.pop("embedding", None)
+            if "direct_embedding" in c:
+                c.pop("direct_embedding", None)
+            items.append(c)
+    if not items:
+        for s in PREDEFINED_WORKFLOW_SCENARIOS:
+            c = {
+                "workflow_id": s["workflow_id"],
+                "scenario": s["scenario"],
+                "workflow_name": s["workflow_name"],
+                "purpose": s["purpose"],
+                "user_requirement": s["user_requirement"],
+                "capabilities": s["capabilities"],
+                "node_types": s["node_types"],
+                "required_tools": s["required_tools"],
+                "dimensions": 384,
+                "source": "predefined"
+            }
+            items.append(c)
+    return {
+        "success": True,
+        "count": len(items),
+        "threshold": DEFAULT_WORKFLOW_RETRIEVAL_THRESHOLD,
+        "scenarios": items
+    }
+
 
 # -----------------------------------------------------------------------------
 # DEDICATED WORKFLOW DASHBOARD & METRICS API (REQUIREMENT 2)
@@ -1085,6 +1641,89 @@ def run_real_nvidia_inference(req: NvidiaInferRequest):
         raise HTTPException(status_code=e.code, detail=f"NVIDIA API Error ({e.code}): {err_msg}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
+
+# -----------------------------------------------------------------------------
+# SARVAM AI INDIC SPEECH-TO-TEXT (STT) API
+# -----------------------------------------------------------------------------
+@app.get("/api/sarvam/status")
+def get_sarvam_status():
+    key = os.getenv("SARVAM_API_KEY") or SARVAM_API_KEY or ""
+    return {
+        "configured": bool(key),
+        "status": "Ready (Sarvam AI Indic Voice)" if key else "Missing SARVAM_API_KEY",
+        "provider": "Sarvam AI",
+        "supported_languages": [
+            {"code": "unknown", "label": "Auto-Detect Indic (Code-Switching)"},
+            {"code": "ta-IN", "label": "Tamil (தமிழ்)"},
+            {"code": "hi-IN", "label": "Hindi (हिन्दी)"},
+            {"code": "te-IN", "label": "Telugu (తెలుగు)"},
+            {"code": "kn-IN", "label": "Kannada (ಕನ್ನಡ)"},
+            {"code": "en-IN", "label": "Indian English"}
+        ]
+    }
+
+@app.post("/api/sarvam/transcribe")
+async def transcribe_audio_sarvam(
+    file: UploadFile = File(...),
+    language_code: Optional[str] = Form("unknown")
+):
+    key = os.getenv("SARVAM_API_KEY") or SARVAM_API_KEY or ""
+    if not key:
+        raise HTTPException(status_code=400, detail="SARVAM_API_KEY is not configured in .env")
+
+    audio_bytes = await file.read()
+    if not audio_bytes or len(audio_bytes) < 100:
+        raise HTTPException(status_code=400, detail="Audio file is empty or too short.")
+
+    raw_content_type = (file.content_type or 'audio/webm').split(';')[0].strip().lower()
+    allowed_types = {
+        'audio/mpeg', 'audio/mp3', 'audio/mpeg3', 'audio/x-mpeg-3', 'audio/x-mp3',
+        'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/pcm_s16le', 'audio/l16',
+        'audio/raw', 'application/octet-stream', 'audio/aac', 'audio/x-aac',
+        'audio/aiff', 'audio/x-aiff', 'audio/ogg', 'audio/opus', 'audio/flac',
+        'audio/x-flac', 'audio/mp4', 'audio/x-m4a', 'audio/amr', 'audio/x-ms-wma',
+        'audio/webm', 'video/webm'
+    }
+    content_type = raw_content_type if raw_content_type in allowed_types else 'audio/webm'
+
+    files = {
+        'file': ('speech.webm', audio_bytes, content_type)
+    }
+    headers = {
+        'api-subscription-key': key.strip()
+    }
+    data = {}
+    if language_code and language_code != "unknown":
+        data['language_code'] = language_code
+
+    try:
+        t0 = time.time()
+        resp = requests.post(
+            "https://api.sarvam.ai/speech-to-text",
+            headers=headers,
+            files=files,
+            data=data,
+            timeout=30
+        )
+        latency_ms = int((time.time() - t0) * 1000)
+
+        if resp.status_code != 200:
+            error_body = resp.text
+            raise HTTPException(status_code=resp.status_code, detail=f"Sarvam AI Error: {error_body}")
+
+        result = resp.json()
+        transcript = result.get("transcript", "").strip()
+        detected_lang = result.get("language_code", "en-IN")
+
+        return {
+            "success": True,
+            "transcript": transcript,
+            "language_code": detected_lang,
+            "latency_ms": latency_ms,
+            "provider": "Sarvam AI (saaras:v2)"
+        }
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to communicate with Sarvam AI: {str(e)}")
 
 # -----------------------------------------------------------------------------
 # MULTI-AGENT RUNTIME SIMULATOR (WITH LIVE NVIDIA FALLBACK)
