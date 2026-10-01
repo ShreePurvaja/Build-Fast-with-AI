@@ -438,9 +438,9 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
 
       {/* 4. WORKFLOW ITEM LIST */}
       <div className="space-y-3">
-        {filteredProjects.map(proj => (
+        {filteredProjects.map((proj, idx) => (
           <div 
-            key={proj.id}
+            key={`${proj.id}-${idx}`}
             onClick={() => onOpenWorkflowDashboard ? onOpenWorkflowDashboard(proj) : onOpenCanvas(proj)}
             className="bg-white p-4 rounded-2xl border border-[#E6E1D7] hover:border-[#D97757] transition-all shadow-2xs cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
             title="Click to view dedicated workflow metrics and model costs"

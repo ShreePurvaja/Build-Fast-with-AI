@@ -3,6 +3,14 @@
 .env.*
 *.env
 !.env.example
+serviceAccountKey.json
+*serviceAccountKey*.json
+
+# PDF Documentation Generation & Generated Assets
+*.pdf
+generate_auth_implementation_pdf.py
+generate_*_pdf*.py
+docs_images/
 
 # Node.js & Frontend
 node_modules/

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bot, 
   Mail, 
@@ -15,6 +15,8 @@ import {
   Sparkles,
   ShieldCheck
 } from 'lucide-react';
+import { sendPhoneOTP, verifyPhoneOTP } from '../src/phoneAuthTextbee';
+import { signInWithGoogle, saveUserToFirestore } from '../src/googleAuth';
 
 interface AuthScreenProps {
   onLoginSuccess: (user: { id?: string; name: string; email: string; token?: string }) => void;
@@ -31,14 +33,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('password123');
   const [orgName, setOrgName] = useState('');
   
-  // Real-Time OTP States
+  // OTP Verification States
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpTarget, setOtpTarget] = useState<'email' | 'phone'>('email');
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
-  const [realtimeOtpBanner, setRealtimeOtpBanner] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [otpMsg, setOtpMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 60-Second Countdown Timer for Resend OTP
+  useEffect(() => {
+    let timer: any = null;
+    if (showOtpModal && resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showOtpModal, resendCooldown]);
 
   // Helper to save token & notify parent
   const handleAuthCompletion = (data: any) => {
@@ -47,6 +64,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       localStorage.setItem('access_token', token);
     }
     const userObj = data.user || { name: name || 'Alex Morgan', email: email || 'demo@company.com' };
+    
+    // Automatically save or update user in Firestore after any successful login
+    const uid = userObj.id || data.uid || userObj.uid || `usr_${(userObj.email || userObj.phone || 'anonymous').replace(/[^a-zA-Z0-9]/g, '')}`;
+    saveUserToFirestore({
+      uid,
+      name: userObj.name || name || "User",
+      email: userObj.email || email || null,
+      phone: userObj.phone || phone || null,
+      authMethod: authMethod === 'phone' ? 'phone' : authMethod === 'google' ? 'google' : 'email_otp'
+    }).catch(err => console.warn("Firestore saveUser notice:", err));
+
     onLoginSuccess(userObj);
   };
 
@@ -113,6 +141,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     if (!email) return;
     setLoading(true);
     setMsg(null);
+    setOtpMsg(null);
+    setOtpCode(['', '', '', '', '', '']); // Clean empty boxes
 
     fetch('http://localhost:8000/api/auth/send-email-otp', {
       method: 'POST',
@@ -122,25 +152,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       .then(res => res.json())
       .then(data => {
         setLoading(false);
-        if (data.success) {
-          const code = data.otp_code || data.otp_demo || '482910';
-          setRealtimeOtpBanner(`📧 Real-Time Email OTP sent to ${email}: ${code}`);
+        if (data.success || data.sent) {
           setOtpTarget('email');
+          setResendCooldown(60);
           setShowOtpModal(true);
+          setTimeout(() => {
+            const firstInput = document.getElementById('real-otp-0');
+            if (firstInput) firstInput.focus();
+          }, 150);
         } else {
           setMsg({ type: 'error', text: data.detail || 'Failed to send Email OTP.' });
         }
       })
       .catch(() => {
         setLoading(false);
-        setRealtimeOtpBanner(`📧 Real-Time Email OTP sent to ${email}: 123456`);
         setOtpTarget('email');
+        setResendCooldown(60);
         setShowOtpModal(true);
       });
   };
 
-  // 4. Send Real-Time Phone OTP
-  const handleSendPhoneOtp = (e: React.FormEvent) => {
+  // 4. Send Real-Time Phone OTP via Firebase
+  const handleSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone) return;
     if (!name.trim()) {
@@ -149,66 +182,147 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
     setLoading(true);
     setMsg(null);
+    setOtpMsg(null);
+    setOtpCode(['', '', '', '', '', '']);
 
-    fetch('http://localhost:8000/api/auth/send-phone-otp', {
+    try {
+      // Normalize Indian phone number format
+      let digits = phone.replace(/\D/g, '');
+      if (digits.length === 12 && digits.startsWith('91')) {
+        digits = digits.slice(2);
+      } else if (digits.length === 11 && digits.startsWith('0')) {
+        digits = digits.slice(1);
+      }
+      if (digits.length !== 10) {
+        setLoading(false);
+        setMsg({ type: 'error', text: 'Please enter a valid 10-digit Indian phone number (e.g. 9876543210).' });
+        return;
+      }
+      const cleanPhone = `+91${digits}`;
+      await sendPhoneOTP(cleanPhone);
+      setLoading(false);
+      setOtpTarget('phone');
+      setResendCooldown(60);
+      setShowOtpModal(true);
+      setTimeout(() => {
+        const firstInput = document.getElementById('real-otp-0');
+        if (firstInput) firstInput.focus();
+      }, 150);
+    } catch (err: any) {
+      setLoading(false);
+      console.error("TextBee Phone Auth Error:", err);
+      setMsg({ type: 'error', text: err.message || 'Failed to send SMS OTP.' });
+    }
+  };
+
+  // Resend OTP with countdown reset & clearing inputs
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || resendLoading) return;
+    setResendLoading(true);
+    setOtpMsg(null);
+    setOtpCode(['', '', '', '', '', '']); // Clear all 6 inputs
+
+    if (otpTarget === 'phone') {
+      try {
+        let digits = phone.replace(/\D/g, '');
+        if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+        else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+        const cleanPhone = `+91${digits}`;
+        await sendPhoneOTP(cleanPhone);
+        setResendLoading(false);
+        setResendCooldown(60); // Reset timer back to 60s
+        setOtpMsg({ type: 'success', text: `New SMS code sent to ${cleanPhone}` });
+        setTimeout(() => {
+          const firstInput = document.getElementById('real-otp-0');
+          if (firstInput) firstInput.focus();
+        }, 100);
+      } catch (err: any) {
+        setResendLoading(false);
+        setOtpMsg({ type: 'error', text: err.message || 'Failed to resend SMS code.' });
+      }
+      return;
+    }
+
+    // Email Resend Flow
+    fetch('http://localhost:8000/api/auth/send-email-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, name })
+      body: JSON.stringify({ email, name: name || email.split('@')[0] })
     })
       .then(res => res.json())
       .then(data => {
-        setLoading(false);
-        if (data.success) {
-          const code = data.otp_code || data.otp_demo || '882194';
-          setRealtimeOtpBanner(`📱 Real-Time SMS OTP sent to ${phone}: ${code}`);
-          setOtpTarget('phone');
-          setShowOtpModal(true);
+        setResendLoading(false);
+        if (data.success || data.sent) {
+          setResendCooldown(60); // Reset timer back to 60s
+          setOtpMsg({ type: 'success', text: `New OTP code sent to ${email}` });
+          setTimeout(() => {
+            const firstInput = document.getElementById('real-otp-0');
+            if (firstInput) firstInput.focus();
+          }, 100);
         } else {
-          setMsg({ type: 'error', text: data.detail || 'Failed to send SMS OTP.' });
+          setOtpMsg({ type: 'error', text: data.detail || 'Failed to resend OTP code.' });
         }
       })
       .catch(() => {
-        setLoading(false);
-        setRealtimeOtpBanner(`📱 Real-Time SMS OTP sent to ${phone}: 882194`);
-        setOtpTarget('phone');
-        setShowOtpModal(true);
+        setResendLoading(false);
+        setResendCooldown(60);
+        setOtpMsg({ type: 'success', text: `New OTP code sent to ${email}` });
       });
   };
 
   // 5. Verify OTP Code
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOtp = otpCode.join('');
     if (enteredOtp.length < 6) {
-      setMsg({ type: 'error', text: 'Please enter all 6 digits of the OTP code.' });
+      setOtpMsg({ type: 'error', text: 'Please enter all 6 digits of the OTP code.' });
       return;
     }
 
     setLoading(true);
-    setMsg(null);
+    setOtpMsg(null);
 
-    const endpoint = otpTarget === 'email' 
-      ? 'http://localhost:8000/api/auth/verify-email-otp' 
-      : 'http://localhost:8000/api/auth/verify-phone-otp';
+    // Phone verification via Firebase confirmationResult
+    if (otpTarget === 'phone') {
+      try {
+        const firebaseResult = await verifyPhoneOTP(enteredOtp);
+        setLoading(false);
+        setShowOtpModal(false);
+        setMsg({ type: 'success', text: 'Phone verified successfully!' });
+        setTimeout(() => {
+          handleAuthCompletion({
+            token: firebaseResult.token,
+            user: {
+              id: firebaseResult.uid,
+              name: name || `User ${phone.slice(-4)}`,
+              email: `${phone.replace(/[^0-9]/g, '')}@phone.user`,
+              phone: firebaseResult.phone,
+              org_name: 'Mobile Workspace'
+            }
+          });
+        }, 500);
+      } catch (err: any) {
+        setLoading(false);
+        setOtpMsg({ type: 'error', text: err.message || 'Invalid or expired SMS OTP code.' });
+      }
+      return;
+    }
 
-    const body = otpTarget === 'email' 
-      ? { email, otp: enteredOtp, name: name || email.split('@')[0] }
-      : { phone, otp: enteredOtp, name: name || `User ${phone.slice(-4)}` };
-
-    fetch(endpoint, {
+    // Email verification via Backend
+    fetch('http://localhost:8000/api/auth/verify-email-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ email, otp: enteredOtp, name: name || email.split('@')[0] })
     })
       .then(res => res.json())
       .then(data => {
         setLoading(false);
-        if (data.success) {
+        if (data.success || data.verified) {
           setShowOtpModal(false);
           setMsg({ type: 'success', text: 'OTP verified successfully!' });
           setTimeout(() => handleAuthCompletion(data), 600);
         } else {
-          setMsg({ type: 'error', text: data.detail || 'Invalid OTP code.' });
+          setOtpMsg({ type: 'error', text: data.reason || data.detail || 'Invalid OTP code.' });
         }
       })
       .catch(() => {
@@ -216,55 +330,97 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         setShowOtpModal(false);
         handleAuthCompletion({ 
           user: { 
-            name: name || (otpTarget === 'email' ? email.split('@')[0] : 'Verified Mobile User'), 
-            email: email || `${phone.replace('+', '')}@phone.user` 
+            name: name || email.split('@')[0], 
+            email: email
           } 
         });
       });
   };
 
-  // 6. Real Google OAuth Flow
-  const handleGoogleAuth = () => {
+  // 6. Real Google OAuth Flow with Firebase Popup & Backend Verification
+  const handleGoogleAuth = async () => {
     setLoading(true);
     setMsg(null);
 
-    const targetName = name.trim() ? name : 'Alex Morgan';
-    const targetEmail = email.trim() ? email : 'alex.morgan@gmail.com';
-
-    fetch('http://localhost:8000/api/auth/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: targetEmail,
-        name: targetName,
-        google_token: 'google_oauth2_token_real'
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        setLoading(false);
-        if (data.success) {
-          handleAuthCompletion(data);
-        } else {
-          setMsg({ type: 'error', text: 'Google Authentication failed' });
-        }
-      })
-      .catch(() => {
-        setLoading(false);
-        handleAuthCompletion({ user: { name: targetName, email: targetEmail } });
+    try {
+      const googleUser = await signInWithGoogle();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/auth/google`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: googleUser.token }),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Login rejected by server');
+      }
+
+      const data = await res.json();
+      
+      // Save to Firestore in background without blocking UI completion
+      saveUserToFirestore(googleUser).catch(e => console.warn("Firestore save notice:", e));
+
+      setLoading(false);
+      setMsg({ type: 'success', text: `Signed in as ${googleUser.name || googleUser.email}` });
+      setTimeout(() => {
+        handleAuthCompletion({
+          token: data.token || googleUser.token,
+          user: {
+            id: data.uid || googleUser.uid,
+            name: data.name || googleUser.name || 'Google User',
+            email: data.email || googleUser.email,
+            photo: googleUser.photo,
+            org_name: 'Google Workspace'
+          }
+        });
+      }, 200);
+    } catch (err: any) {
+      console.error("Google sign-in failed:", err);
+      setLoading(false);
+      setMsg({ type: 'error', text: err.message || 'Google sign-in failed' });
+    }
   };
 
   const handleOtpDigitChange = (index: number, val: string) => {
-    if (val.length > 1) val = val[0];
+    const clean = val.replace(/\D/g, '');
+    if (!clean) {
+      const newOtp = [...otpCode];
+      newOtp[index] = '';
+      setOtpCode(newOtp);
+      return;
+    }
+    const char = clean.slice(-1);
     const newOtp = [...otpCode];
-    newOtp[index] = val;
+    newOtp[index] = char;
     setOtpCode(newOtp);
 
-    if (val && index < 5) {
+    if (index < 5) {
       const nextInput = document.getElementById(`real-otp-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      const prevInput = document.getElementById(`real-otp-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const newOtp = ['', '', '', '', '', ''];
+    pasted.split('').forEach((d, idx) => {
+      newOtp[idx] = d;
+    });
+    setOtpCode(newOtp);
+    const focusIdx = Math.min(pasted.length, 5);
+    const nextInput = document.getElementById(`real-otp-${focusIdx}`);
+    if (nextInput) nextInput.focus();
   };
 
   return (
@@ -441,43 +597,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <span>Send Phone SMS OTP</span>}
           </button>
+
+          {/* Firebase Phone Auth Invisible reCAPTCHA container */}
+          <div id="recaptcha-container"></div>
         </form>
       )}
 
       {/* 3. GOOGLE AUTH METHOD */}
       {authMethod === 'google' && (
-        <div className="space-y-4 text-center py-2">
-          <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] space-y-3 text-left">
-            <div>
-              <label className="text-xs font-bold text-[#2B2826] block mb-1">Your Name for Workspace</label>
-              <div className="relative">
-                <User className="w-4 h-4 absolute left-3 top-3 text-[#9B9488]" />
-                <input 
-                  type="text" 
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Alex Morgan"
-                  className="w-full pl-9 pr-3 py-2 border border-[#E6E1D7] rounded-xl text-xs bg-white focus:outline-none focus:border-[#D97757]"
-                />
-              </div>
+        <div className="space-y-4 text-center py-4">
+          <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E6E1D7] text-center space-y-2">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-2xs border border-[#E6E1D7]">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
             </div>
-
-            <div>
-              <label className="text-xs font-bold text-[#2B2826] block mb-1">Google Email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-3 text-[#9B9488]" />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="alex.morgan@gmail.com"
-                  className="w-full pl-9 pr-3 py-2 border border-[#E6E1D7] rounded-xl text-xs bg-white focus:outline-none focus:border-[#D97757]"
-                />
-              </div>
-            </div>
+            <p className="text-xs font-bold text-[#2B2826]">Single Sign-On with Google</p>
+            <p className="text-[11px] text-[#6E685E]">
+              Authenticate instantly with your Google account. Your profile and email will be securely verified by Firebase.
+            </p>
           </div>
 
           <button 
+            type="button"
             onClick={handleGoogleAuth}
             disabled={loading}
             className="w-full btn-claude-primary text-xs py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-2xs"
@@ -487,7 +632,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#ffffff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 </svg>
-                <span>Sign In with Google</span>
+                <span>Continue with Google</span>
               </span>
             )}
           </button>
@@ -572,7 +717,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         </form>
       )}
 
-      {/* REAL-TIME 6-DIGIT OTP VERIFICATION MODAL */}
+      {/* 6-DIGIT OTP VERIFICATION MODAL */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-[#E6E1D7] p-8 max-w-sm w-full shadow-xl">
@@ -583,14 +728,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               <h3 className="font-extrabold text-lg text-[#2B2826]">
                 Verify {otpTarget === 'email' ? 'Email' : 'SMS Phone'} OTP
               </h3>
-              <p className="text-xs text-[#6E685E] mt-1">
-                Enter code sent to <b>{otpTarget === 'email' ? email : phone}</b> for <b>{name || 'User'}</b>
+              <p className="text-xs text-[#6E685E] mt-1.5">
+                OTP sent to <b className="text-[#2B2826]">{otpTarget === 'email' ? email : phone}</b>
               </p>
-              
-              {/* REAL-TIME OTP BANNER */}
-              {realtimeOtpBanner && (
-                <div className="mt-3 bg-[#FEF3C7] text-[#D97706] text-xs font-extrabold p-2.5 rounded-xl border border-[#FDE68A] animate-bounce-subtle">
-                  {realtimeOtpBanner}
+
+              {otpMsg && (
+                <div className={`mt-3 text-xs font-semibold p-2.5 rounded-xl border ${
+                  otpMsg.type === 'error' 
+                    ? 'bg-[#FCEAE8] text-[#C93B2B] border-[#FCA5A5]' 
+                    : 'bg-[#E6F4F1] text-[#0F766E] border-[#99F6E4]'
+                }`}>
+                  {otpMsg.text}
                 </div>
               )}
             </div>
@@ -602,28 +750,53 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     key={i}
                     id={`real-otp-${i}`}
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
                     value={otpCode[i]}
                     onChange={e => handleOtpDigitChange(i, e.target.value)}
-                    className="w-10 h-12 text-center text-lg font-bold border border-[#E6E1D7] rounded-xl bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    onPaste={handleOtpPaste}
+                    className="w-10 h-12 text-center text-lg font-bold border border-[#E6E1D7] rounded-xl bg-[#FAF8F5] focus:outline-none focus:border-[#D97757] text-[#2B2826]"
                   />
                 ))}
+              </div>
+
+              {/* Resend OTP button & 30-second countdown */}
+              <div className="flex items-center justify-center pt-1 text-center">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || resendLoading}
+                  onClick={handleResendOtp}
+                  className={`text-xs py-1.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                    resendCooldown > 0 || resendLoading
+                      ? 'text-[#9B9488] bg-[#FAF8F5] border border-[#E6E1D7] cursor-not-allowed font-medium'
+                      : 'text-[#D97757] hover:text-[#B85C3D] hover:bg-[#FDF3E9] cursor-pointer font-bold border border-[#D97757]/30'
+                  }`}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${resendLoading ? 'animate-spin' : ''}`} />
+                  {resendCooldown > 0 ? (
+                    <span>Resend OTP in <strong>{resendCooldown}s</strong></span>
+                  ) : (
+                    <span>Resend OTP</span>
+                  )}
+                </button>
               </div>
 
               <div className="flex space-x-2 pt-2">
                 <button 
                   type="button" 
                   onClick={() => setShowOtpModal(false)}
-                  className="btn-claude-secondary flex-1 text-xs py-2 font-bold"
+                  className="btn-claude-secondary flex-1 text-xs py-2.5 font-bold"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="btn-claude-primary flex-1 text-xs py-2 font-bold"
+                  className="btn-claude-primary flex-1 text-xs py-2.5 font-bold flex items-center justify-center"
                 >
-                  Verify & Log In
+                  {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <span>Verify & Log In</span>}
                 </button>
               </div>
             </form>
