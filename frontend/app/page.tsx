@@ -158,16 +158,8 @@ export default function Home() {
     setExecutions(prev => [newRun, ...prev]);
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-[#D97757] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2B2826]">
+    <div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2B2826]" suppressHydrationWarning>
       {activeTab === 'landing' ? (
         /* 1st Screen: Landing Page Layout */
         <div className="flex flex-col min-h-screen w-full">
