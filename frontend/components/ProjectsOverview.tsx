@@ -441,9 +441,9 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
         {filteredProjects.map((proj, idx) => (
           <div 
             key={`${proj.id}-${idx}`}
-            onClick={() => onOpenWorkflowDashboard ? onOpenWorkflowDashboard(proj) : onOpenCanvas(proj)}
+            onClick={() => onOpenCanvas(proj)}
             className="bg-white p-4 rounded-2xl border border-[#E6E1D7] hover:border-[#D97757] transition-all shadow-2xs cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
-            title="Click to view dedicated workflow metrics and model costs"
+            title="Open workflow in Canvas Studio"
           >
             {/* Left Side Workflow Info */}
             <div className="flex items-center space-x-3.5 overflow-hidden">

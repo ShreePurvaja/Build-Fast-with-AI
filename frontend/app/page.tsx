@@ -222,7 +222,11 @@ export default function Home() {
                 <WorkflowCanvas 
                   activeProject={activeProject}
                   onRunFinished={handleRunFinished} 
-                  onBackToProjects={() => setActiveTab('workflow-dashboard')}
+                  onBackToProjects={() => setActiveTab('projects')}
+                  onOpenDashboard={(proj) => {
+                    if (proj) setActiveProject(proj);
+                    setActiveTab('workflow-dashboard');
+                  }}
                 />
               )}
 
