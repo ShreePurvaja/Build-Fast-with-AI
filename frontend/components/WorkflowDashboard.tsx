@@ -114,7 +114,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           <button 
             onClick={onBackToProjects}
             className="p-2 rounded-xl text-[#6E685E] hover:text-[#2B2826] hover:bg-[#FAF8F5] border border-[#E6E1D7] transition-colors"
-            title="Back to All Workflows"
+            title="Back to Canvas Studio"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>

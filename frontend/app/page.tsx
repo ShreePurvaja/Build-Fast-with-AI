@@ -213,7 +213,7 @@ export default function Home() {
                 <WorkflowDashboard 
                   workflow={activeProject}
                   onOpenCanvas={handleOpenCanvas}
-                  onBackToProjects={() => setActiveTab('projects')}
+                  onBackToProjects={() => setActiveTab('editor')}
                 />
               )}
 

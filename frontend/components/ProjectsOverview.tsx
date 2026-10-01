@@ -64,6 +64,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [projectList, setProjectList] = useState<Project[]>(projects);
   const [isLoading, setIsLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<'updated' | 'name' | 'created'>('updated');
 
   // Form Fields for New Project
   const [projName, setProjName] = useState('');
@@ -335,11 +336,44 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
       });
   };
 
-  const filteredProjects = projectList.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.vertical.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const getUpdateWeight = (val?: string) => {
+    if (!val) return 999999;
+    const str = val.toLowerCase();
+    if (str.includes('just now') || str.includes('second')) return 0;
+    const matchMin = str.match(/(\d+)\s*min/);
+    if (matchMin) return parseInt(matchMin[1], 10);
+    const matchHr = str.match(/(\d+)\s*hour/);
+    if (matchHr) return parseInt(matchHr[1], 10) * 60;
+    const matchDay = str.match(/(\d+)\s*day/);
+    if (matchDay) return parseInt(matchDay[1], 10) * 1440;
+    const parsed = Date.parse(val);
+    if (!isNaN(parsed)) return -parsed;
+    return 999999;
+  };
+
+  const filteredProjects = [...projectList]
+    .filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.vertical.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a: any, b: any) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      }
+      if (sortBy === 'created') {
+        const timeA = typeof a.created_at === 'number' ? a.created_at : (Date.parse(a.created_at || '0') || 0);
+        const timeB = typeof b.created_at === 'number' ? b.created_at : (Date.parse(b.created_at || '0') || 0);
+        return timeB - timeA;
+      }
+      // 'updated' default: most recent first
+      const weightA = getUpdateWeight(a.updated_at);
+      const weightB = getUpdateWeight(b.updated_at);
+      if (weightA !== weightB) return weightA - weightB;
+      const timeA = typeof a.created_at === 'number' ? a.created_at : 0;
+      const timeB = typeof b.created_at === 'number' ? b.created_at : 0;
+      return timeB - timeA;
+    });
 
   return (
     <div className="space-y-6 w-full max-w-full font-sans text-[#2B2826] pb-10">
@@ -428,10 +462,14 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
             />
           </div>
 
-          <select className="bg-white border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#6E685E] focus:outline-none focus:border-[#D97757]">
-            <option>Sort by last updated</option>
-            <option>Sort by name</option>
-            <option>Sort by created date</option>
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'updated' | 'name' | 'created')}
+            className="bg-white border border-[#E6E1D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#6E685E] focus:outline-none focus:border-[#D97757] cursor-pointer shadow-2xs"
+          >
+            <option value="updated">Sort by last updated</option>
+            <option value="name">Sort by name</option>
+            <option value="created">Sort by created date</option>
           </select>
         </div>
       </div>
