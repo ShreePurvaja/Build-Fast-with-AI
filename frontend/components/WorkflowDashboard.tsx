@@ -114,7 +114,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           <button 
             onClick={onBackToProjects}
             className="p-2 rounded-xl text-[#6E685E] hover:text-[#2B2826] hover:bg-[#FAF8F5] border border-[#E6E1D7] transition-colors"
-            title="Back to All Workflows"
+            title="Back to Canvas Studio"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -149,14 +149,6 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             title="Refresh Metrics"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#D97757]' : ''}`} />
-          </button>
-
-          <button 
-            onClick={() => onOpenCanvas(wf)}
-            className="btn-claude-primary text-xs py-2.5 px-4 font-bold flex items-center gap-2 shadow-xs"
-          >
-            <Layers className="w-4 h-4" />
-            <span>Open in Canvas Studio</span>
           </button>
         </div>
       </div>

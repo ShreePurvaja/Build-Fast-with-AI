@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bot, 
+  LayoutDashboard,
   Plus, 
   Play, 
   Search, 
@@ -138,12 +139,14 @@ interface WorkflowCanvasProps {
   onRunFinished: (newRun: any) => void;
   onBackToProjects?: () => void;
   activeProject?: any;
+  onOpenDashboard?: (proj?: any) => void;
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ 
   onRunFinished, 
   onBackToProjects,
-  activeProject
+  activeProject,
+  onOpenDashboard
 }) => {
   // Workflow Identity & Persistence State
   const [currentWorkflowId, setCurrentWorkflowId] = useState<string>(activeProject?.id || 'proj_support_01');
@@ -1336,6 +1339,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               }`}
             >
               <Code className="w-5 h-5" />
+            </button>
+
+            <button 
+              onClick={() => onOpenDashboard && onOpenDashboard(activeProject)}
+              title="Open Dedicated Workflow Dashboard & Metrics"
+              className="w-11 h-11 bg-white hover:bg-[#FAF8F5] text-[#2B2826] hover:text-[#D97757] hover:border-[#D97757] border border-[#E6E1D7] rounded-2xl flex items-center justify-center shadow-md transition-all group"
+            >
+              <LayoutDashboard className="w-5 h-5 text-[#6E685E] group-hover:text-[#D97757] transition-colors" />
             </button>
           </div>
         </div>

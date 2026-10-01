@@ -14,76 +14,21 @@ import { MemoryBacklogTable } from '../components/MemoryBacklogTable';
 import { WorkflowDashboard } from '../components/WorkflowDashboard';
 
 interface UserState {
+  id?: string;
   name: string;
   email: string;
+  phone?: string;
+  org_name?: string;
 }
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'workflow-dashboard' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('projects');
+  const [activeTab, setActiveTab] = useState<'landing' | 'auth' | 'projects' | 'editor' | 'workflow-dashboard' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory'>('auth');
   
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  
-  const [user, setUser] = useState<UserState | null>({
-    name: 'Alex Morgan',
-    email: 'demo@company.com'
-  });
-
+  // Real authenticated user state (starts as null to prevent accidental demo user leaks)
+  const [user, setUser] = useState<UserState | null>(null);
   const [activeProject, setActiveProject] = useState<any>(null);
-
-  // Projects State
-  const [projects, setProjects] = useState([
-    {
-      id: 'proj_support_01',
-      name: 'Omnichannel Customer Support Mega Voice Agent (20 Nodes)',
-      vertical: 'D2C E-commerce & Retail',
-      languages: ['ta', 'hi', 'en'],
-      description: '20-node production support agent with VAD, Indic STT, Intent Router, Postgres Order DB, ChromaDB RAG, Llama 3.2 Vision, n8n Action Executor, ElevenLabs TTS, and Barge-In.',
-      active_workforces: 1,
-      total_executions: 1428,
-      success_rate: '99.8%',
-      status: 'Active',
-      updated_at: 'Just now'
-    },
-    {
-      "id": "proj_interviewer_02",
-      "name": "AI Technical & HR Interviewer Voice Agent (23 Nodes)",
-      "vertical": "HR Tech & Recruitment",
-      "languages": ["en", "hi"],
-      "description": "23-node voice interviewer with Resume PDF parsing, ATS match, Calendly invite, adaptive question loop, DeepSeek R1 scorecard, PDF report, and Greenhouse/Lever ATS sync.",
-      "active_workforces": 1,
-      "total_executions": 856,
-      "success_rate": "99.1%",
-      "status": "Active",
-      "updated_at": "2 hours ago"
-    },
-    {
-      id: 'proj_sales_02',
-      name: 'Sales Lead Qualification & Booking',
-      vertical: 'B2B SaaS / Services',
-      languages: ['hi', 'en'],
-      description: 'Qualifies budget & timeline, books calendar demos, and updates CRM.',
-      active_workforces: 1,
-      total_executions: 856,
-      success_rate: '99.1%',
-      status: 'Active',
-      updated_at: '2 hours ago'
-    },
-    {
-      id: 'proj_voice_03',
-      name: 'Multilingual Technical Support Desk',
-      vertical: 'Telecom / Enterprise IT',
-      languages: ['hi', 'ta', 'te', 'en'],
-      description: 'Voice call intake with Indic STT/TTS, ticket generation, and NVIDIA Llama-3 reasoning.',
-      active_workforces: 2,
-      total_executions: 2140,
-      success_rate: '98.9%',
-      status: 'Active',
-      updated_at: '10 minutes ago'
-    }
-  ]);
+  const [projects, setProjects] = useState<any[]>([]);
 
   // Executions History State
   const [executions, setExecutions] = useState([
@@ -97,26 +42,63 @@ export default function Home() {
     }
   ]);
 
-  // Restore authenticated session using JWT access_token from localStorage
+  // Check authenticated session strictly on client mount
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      fetch('http://localhost:8000/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.user) {
-            setUser(data.user);
-          }
-        })
-        .catch(() => {});
+    setMounted(true);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+    if (!token) {
+      setUser(null);
+      setActiveTab('auth');
+      setProjects([]);
+      return;
     }
 
+    // Verify session token with backend
+    fetch('http://localhost:8000/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Session invalid or expired');
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.user) {
+          setUser(data.user);
+          setActiveTab('projects');
+
+          // Fetch only this user's authenticated workflows
+          fetch('http://localhost:8000/api/workflows', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(res => res.json())
+            .then(wData => {
+              if (wData && (wData.workflows || wData.projects)) {
+                setProjects(wData.workflows || wData.projects);
+              }
+            })
+            .catch(() => {});
+        } else {
+          throw new Error('User not found');
+        }
+      })
+      .catch(() => {
+        // Expired/invalid session: enforce complete logout and clean storage
+        localStorage.removeItem('access_token');
+        setUser(null);
+        setActiveTab('auth');
+        setProjects([]);
+      });
+  }, []);
+
+  const handleLoginSuccess = (userData: UserState) => {
+    setUser(userData);
+    setActiveTab('projects');
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // Fetch initial projects from backend SQLite DB for current user
     fetch('http://localhost:8000/api/workflows', { headers })
       .then(res => res.json())
       .then(data => {
@@ -125,16 +107,15 @@ export default function Home() {
         }
       })
       .catch(() => {});
-  }, []);
-
-  const handleLoginSuccess = (userData: UserState) => {
-    setUser(userData);
-    setActiveTab('projects');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+    }
     setUser(null);
+    setActiveProject(null);
+    setProjects([]);
     setActiveTab('auth');
   };
 
@@ -158,28 +139,48 @@ export default function Home() {
     setExecutions(prev => [newRun, ...prev]);
   };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center" suppressHydrationWarning>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#D97757] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs text-[#8C827A] font-medium tracking-wide">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Strict route protection: If user is not authenticated and tab is not landing, force 'auth'
+  const currentTab = !user && activeTab !== 'landing' ? 'auth' : activeTab;
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2B2826]" suppressHydrationWarning>
-      {activeTab === 'landing' ? (
+      {currentTab === 'landing' ? (
         /* 1st Screen: Landing Page Layout */
         <div className="flex flex-col min-h-screen w-full">
           <main className="flex-1 w-full">
             <LandingPage 
               onStartBuilding={() => setActiveTab(user ? 'projects' : 'auth')}
-              onExploreProjects={() => setActiveTab('projects')}
-              onOpenAnalytics={() => setActiveTab('analytics')}
-              onOpenMemory={() => setActiveTab('projects')}
+              onExploreProjects={() => setActiveTab(user ? 'projects' : 'auth')}
+              onOpenAnalytics={() => setActiveTab(user ? 'analytics' : 'auth')}
+              onOpenMemory={() => setActiveTab(user ? 'projects' : 'auth')}
             />
           </main>
         </div>
       ) : (
         /* App Layout: Header & View Area */
         <div className="flex flex-col min-h-screen w-full">
-          {/* Hide Navbar in editor view to eliminate double top headers */}
-          {activeTab !== 'editor' && (
+          {/* Hide Navbar in editor view or when on auth screen */}
+          {currentTab !== 'editor' && (
             <Navbar
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
+              activeTab={currentTab}
+              setActiveTab={(tab) => {
+                if (!user && tab !== 'landing') {
+                  setActiveTab('auth');
+                } else {
+                  setActiveTab(tab);
+                }
+              }}
               user={user}
               onOpenCreateProject={() => setActiveTab('projects')}
               onLogout={handleLogout}
@@ -189,17 +190,17 @@ export default function Home() {
           <div className="flex-1 flex flex-col min-h-screen min-w-0 w-full">
             {/* Main App View Routing */}
             <main className={`flex-1 w-full overflow-y-auto ${
-              activeTab === 'editor' || activeTab === 'analytics' ? 'p-0 max-w-full' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8'
+              currentTab === 'editor' || currentTab === 'analytics' ? 'p-0 max-w-full' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8'
             }`}>
-              {/* Auth Screen */}
-              {activeTab === 'auth' && (
+              {/* Auth Screen (Strictly shown whenever unauthenticated) */}
+              {currentTab === 'auth' && (
                 <div className="max-w-md mx-auto py-10">
                   <AuthScreen onLoginSuccess={handleLoginSuccess} />
                 </div>
               )}
 
-              {/* Home Screen: User's Recent Projects */}
-              {activeTab === 'projects' && (
+              {/* Home Screen: User's Recent Projects (Protected) */}
+              {currentTab === 'projects' && user && (
                 <ProjectsOverview 
                   projects={projects}
                   onOpenCanvas={handleOpenCanvas}
@@ -208,52 +209,56 @@ export default function Home() {
                 />
               )}
 
-              {/* Dedicated Workflow Dashboard (Metrics, Model Costs, Runs) */}
-              {activeTab === 'workflow-dashboard' && activeProject && (
+              {/* Dedicated Workflow Dashboard (Protected) */}
+              {currentTab === 'workflow-dashboard' && user && activeProject && (
                 <WorkflowDashboard 
                   workflow={activeProject}
                   onOpenCanvas={handleOpenCanvas}
-                  onBackToProjects={() => setActiveTab('projects')}
+                  onBackToProjects={() => setActiveTab('editor')}
                 />
               )}
 
-              {/* n8n Studio Workflow Canvas */}
-              {activeTab === 'editor' && (
+              {/* n8n Studio Workflow Canvas (Protected) */}
+              {currentTab === 'editor' && user && (
                 <WorkflowCanvas 
                   activeProject={activeProject}
                   onRunFinished={handleRunFinished} 
-                  onBackToProjects={() => setActiveTab('workflow-dashboard')}
+                  onBackToProjects={() => setActiveTab('projects')}
+                  onOpenDashboard={(proj) => {
+                    if (proj) setActiveProject(proj);
+                    setActiveTab('workflow-dashboard');
+                  }}
                 />
               )}
 
-              {/* Model Usage & NVIDIA Analytics Dashboard */}
-              {activeTab === 'analytics' && (
+              {/* Model Usage & NVIDIA Analytics Dashboard (Protected) */}
+              {currentTab === 'analytics' && user && (
                 <div className="py-6 px-4">
                   <AnalyticsOverview />
                 </div>
               )}
 
-              {/* Executions History Runs */}
-              {activeTab === 'executions' && (
+              {/* Executions History Runs (Protected) */}
+              {currentTab === 'executions' && user && (
                 <ExecutionsView executions={executions} />
               )}
 
-              {/* Escalations Inbox */}
-              {activeTab === 'escalations' && (
+              {/* Escalations Inbox (Protected) */}
+              {currentTab === 'escalations' && user && (
                 <div className="max-w-6xl mx-auto py-6 px-4">
                   <EscalationInbox />
                 </div>
               )}
 
-              {/* Knowledge Base Manager */}
-              {activeTab === 'kb' && (
+              {/* Knowledge Base Manager (Protected) */}
+              {currentTab === 'kb' && user && (
                 <div className="max-w-6xl mx-auto py-6 px-4">
                   <KnowledgeBaseManager />
                 </div>
               )}
 
-              {/* AGENT_MEMORY.md Audit Backlog Table */}
-              {activeTab === 'memory' && (
+              {/* AGENT_MEMORY.md Audit Backlog Table (Protected) */}
+              {currentTab === 'memory' && user && (
                 <div className="py-6 px-4">
                   <MemoryBacklogTable />
                 </div>
