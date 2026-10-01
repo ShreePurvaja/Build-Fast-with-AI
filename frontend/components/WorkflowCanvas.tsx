@@ -24,6 +24,7 @@ import {
   Maximize2, 
   ZoomIn, 
   ZoomOut,
+  Map,
   RefreshCw,
   StickyNote,
   Download,
@@ -159,7 +160,120 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
 
-  const markDirty = () => setIsDirty(true);
+  // Canvas Container Ref & Smooth Panning / Minimap States
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+  const [viewport, setViewport] = useState<{ scrollLeft: number; scrollTop: number; clientWidth: number; clientHeight: number }>({ scrollLeft: 0, scrollTop: 0, clientWidth: 1200, clientHeight: 800 });
+  const [showMinimap, setShowMinimap] = useState(true);
+
+  // Draggable Floating Minimap Position (User can drag minimap anywhere on viewport!)
+  const [minimapPos, setMinimapPos] = useState({ right: 24, bottom: 24 });
+  const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
+  const minimapDragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const handleMinimapDragStart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDraggingMinimap(true);
+    minimapDragOffsetRef.current = {
+      x: e.clientX + minimapPos.right,
+      y: e.clientY + minimapPos.bottom
+    };
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDraggingMinimap) {
+        const newRight = Math.max(10, Math.min(window.innerWidth - 270, minimapDragOffsetRef.current.x - e.clientX));
+        const newBottom = Math.max(10, Math.min(window.innerHeight - 200, minimapDragOffsetRef.current.y - e.clientY));
+        setMinimapPos({ right: newRight, bottom: newBottom });
+      }
+    };
+    const handleGlobalMouseUp = () => {
+      setIsDraggingMinimap(false);
+    };
+    if (isDraggingMinimap) {
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDraggingMinimap]);
+
+  const handleScrollCanvas = () => {
+    if (canvasContainerRef.current) {
+      const { scrollLeft, scrollTop, clientWidth, clientHeight } = canvasContainerRef.current;
+      setViewport({ scrollLeft, scrollTop, clientWidth, clientHeight });
+    }
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.absolute.w-64') || (e.target as HTMLElement).closest('.cursor-pointer') || (e.target as HTMLElement).closest('.absolute.w-60')) return;
+    if (canvasContainerRef.current) {
+      setIsPanning(true);
+      setPanStart({
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: canvasContainerRef.current.scrollLeft,
+        scrollTop: canvasContainerRef.current.scrollTop
+      });
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (draggingNodeId && canvasContainerRef.current) {
+      const scale = zoomScale / 100;
+      const rect = canvasContainerRef.current.getBoundingClientRect();
+      const canvasMouseX = (e.clientX - rect.left + canvasContainerRef.current.scrollLeft) / scale;
+      const canvasMouseY = (e.clientY - rect.top + canvasContainerRef.current.scrollTop) / scale;
+      const newX = Math.max(10, Math.round(canvasMouseX - dragOffsetRef.current.x));
+      const newY = Math.max(10, Math.round(canvasMouseY - dragOffsetRef.current.y));
+      setNodes(prev => prev.map(n => n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n));
+      handleScrollCanvas();
+    } else if (isPanning && canvasContainerRef.current) {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      canvasContainerRef.current.scrollLeft = panStart.scrollLeft - dx;
+      canvasContainerRef.current.scrollTop = panStart.scrollTop - dy;
+      handleScrollCanvas();
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleFocusNode = (node: NodeData) => {
+    if (canvasContainerRef.current) {
+      const scale = zoomScale / 100;
+      const targetX = (node.x * scale) - (viewport.clientWidth / 2) + 128;
+      const targetY = (node.y * scale) - (viewport.clientHeight / 2) + 45;
+      canvasContainerRef.current.scrollTo({
+        left: Math.max(0, targetX),
+        top: Math.max(0, targetY),
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleMinimapClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canvasContainerRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    const targetCanvasX = (clickX / 240) * dynamicContentWidth;
+    const targetCanvasY = (clickY / 140) * dynamicContentHeight;
+    
+    const scale = zoomScale / 100;
+    canvasContainerRef.current.scrollTo({
+      left: Math.max(0, (targetCanvasX * scale) - (viewport.clientWidth / 2)),
+      top: Math.max(0, (targetCanvasY * scale) - (viewport.clientHeight / 2)),
+      behavior: 'smooth'
+    });
+  };
 
   // Fetch workflow from MongoDB database on mount or activeProject change
   useEffect(() => {
@@ -168,6 +282,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (activeProject?.name) setWorkflowTitle(activeProject.name);
 
     const isInterviewer = wfId === 'proj_interviewer_02' || wfId.includes('interviewer');
+    const minConns = isInterviewer ? 37 : 25;
 
     // Set initial fallback nodes immediately based on project ID
     if (activeProject?.nodes && Array.isArray(activeProject.nodes) && activeProject.nodes.length >= (isInterviewer ? 23 : 20)) {
@@ -176,13 +291,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       setNodes(isInterviewer ? DEFAULT_INTERVIEWER_NODES : DEFAULT_SUPPORT_NODES);
     }
 
-    if (activeProject?.connections && Array.isArray(activeProject.connections) && activeProject.connections.length > 0) {
+    if (activeProject?.connections && Array.isArray(activeProject.connections) && activeProject.connections.length >= minConns) {
       setConnections(activeProject.connections);
     } else {
       setConnections(isInterviewer ? DEFAULT_INTERVIEWER_CONNECTIONS : DEFAULT_SUPPORT_CONNECTIONS);
     }
 
-    fetch(`http://localhost:8000/api/workflows/${wfId}`)
+    fetch(`http://localhost:8000/api/workflows/${wfId}?refresh=true`)
       .then(res => res.json())
       .then(data => {
         if (data && data.workflow) {
@@ -193,7 +308,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           } else {
             setNodes(isInterviewer ? DEFAULT_INTERVIEWER_NODES : DEFAULT_SUPPORT_NODES);
           }
-          if (wf.connections && Array.isArray(wf.connections) && wf.connections.length > 0) {
+          if (wf.connections && Array.isArray(wf.connections) && wf.connections.length >= minConns) {
             setConnections(wf.connections);
           } else {
             setConnections(isInterviewer ? DEFAULT_INTERVIEWER_CONNECTIONS : DEFAULT_SUPPORT_CONNECTIONS);
@@ -255,25 +370,25 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   // Default Fallback Mega DAGs for Support (20 nodes) and Interviewer (23 nodes)
   const DEFAULT_SUPPORT_NODES: NodeData[] = [
     {"id": "node-1", "name": "node_01 Voice Input (VAD)", "type": "trigger", "icon": "trig_voice", "subtitle": "WebRTC / Sarvam VAD", "resource": "Audio Stream", "operation": "Stream Voice Input", "credentialId": "cred_sarvam_key", "x": 60, "y": 180, "inputPayload": {"caller": "+91 9876543210", "vad_active": true}, "outputPayload": {"audio_stream": "active", "vad_silence_ms": 200}},
-    {"id": "node-2", "name": "node_02 STT + Diarization", "type": "trigger", "icon": "trig_voice", "subtitle": "Sarvam Indic STT Stream", "resource": "Speech Transcriber", "operation": "Transcribe Indic Audio", "credentialId": "cred_sarvam_key", "x": 60, "y": 420, "inputPayload": {"language": "ta-IN", "audio_buffer": "stream_blob"}, "outputPayload": {"transcript": "வணக்கம், order #4821 saree arrived damaged.", "stt_confidence": 0.98}},
-    {"id": "node-3", "name": "node_03 Intent Classifier", "type": "ai", "icon": "ai_agent_worker", "subtitle": "NVIDIA Llama 3.1 70B Router", "resource": "Agent Reasoning Turn", "operation": "Classify Intent & Route", "credentialId": "cred_nvidia_env", "model": "nvidia/llama-3.1-nemotron-70b-instruct", "prompt": "Classify intent into ORDER_QUERY, POLICY_RAG, REPLACEMENT_REFUND, or HUMAN_ESCALATE.", "x": 420, "y": 300, "inputPayload": {"transcript": "order #4821 saree arrived damaged"}, "outputPayload": {"intent": "REPLACEMENT_OR_REFUND", "confidence": 0.98}},
-    {"id": "node-4", "name": "node_04 Order DB (Postgres/Mongo)", "type": "db", "icon": "db_gateway", "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record", "operation": "Execute Query / Find Document", "dbEngine": "MongoDB", "connectionUrl": "mongodb://localhost:27017/ai_workforce", "credentialId": "cred_mongo_prod", "x": 780, "y": 60, "inputPayload": {"order_id": "4821"}, "outputPayload": {"order_id": "4821", "customer": "Alex Morgan", "item": "Kanjivaram Silk Saree", "total": 1499, "status": "Delivered"}},
-    {"id": "node-5", "name": "node_05 Policy RAG (ChromaDB)", "type": "knowledge", "icon": "kb_vector", "subtitle": "384-dim Dense Embeddings", "resource": "Vector Store", "operation": "Vector Similarity Search", "credentialId": "cred_mongo_prod", "ragConfig": {"collection_name": "support_policies", "transformer_model": "sentence-transformers/all-MiniLM-L6-v2", "vector_dimension": 384}, "x": 780, "y": 240, "inputPayload": {"query": "Saree damage return window"}, "outputPayload": {"top_chunk": "Damaged saree items eligible for instant replacement/refund within 7 days.", "similarity": 0.94}},
-    {"id": "node-6", "name": "node_06 Vision Damage (Llama 3.2)", "type": "ai", "icon": "ai_vision_inspector", "subtitle": "Meta Llama 3.2 11B Vision", "resource": "Visual Inspection", "operation": "Analyze Photo Defect", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.2-11b-vision-instruct", "image_url": "https://storage.googleapis.com/demo/damaged_saree.jpg", "prompt": "Inspect saree photo {{ $json.image_url }} for fabric tear defect.", "x": 780, "y": 420, "inputPayload": {"image_url": "https://storage.googleapis.com/demo/damaged_saree.jpg"}, "outputPayload": {"damage_detected": true, "defect_category": "FABRIC_TEAR", "confidence": 0.96}},
-    {"id": "node-7", "name": "node_07 Customer Memory (Redis)", "type": "db", "icon": "db_gateway", "subtitle": "Redis / Session Buffer", "resource": "Key-Value State", "operation": "Read Customer Session History", "dbEngine": "Redis", "credentialId": "cred_mongo_prod", "x": 420, "y": 120, "inputPayload": {"customer_id": "cust_8891"}, "outputPayload": {"prior_orders": 3, "vip_tier": "Gold", "csat_avg": 4.8}},
-    {"id": "node-8", "name": "node_08 Context Agg + Response Gen", "type": "ai", "icon": "ai_agent_worker", "subtitle": "NVIDIA Llama 3.1 70B LLM", "resource": "Agent Reasoning Turn", "operation": "Synthesize Spoken Response", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.1-70b-instruct", "prompt": "Synthesize empathetic spoken turn confirming refund under ₹2,000 policy limit.", "x": 1140, "y": 240, "inputPayload": {"order_amount": 1499, "damage_verified": true}, "outputPayload": {"response_text": "Alex, your refund of ₹1,499 has been approved and initiated.", "tool_call": "process_refund"}},
-    {"id": "node-9", "name": "node_09 Action Executor (n8n)", "type": "tool", "icon": "tool_gdrive", "subtitle": "Payment / ERP Dispatch", "resource": "Stripe / Razorpay API", "operation": "Execute Refund Payout", "credentialId": "cred_payment_gateway", "x": 1500, "y": 120, "inputPayload": {"order_id": "4821", "amount": 1499, "idempotency_key": "IK-8821"}, "outputPayload": {"payout_status": "SUCCESS", "refund_id": "RF-2291"}},
-    {"id": "node-10", "name": "node_10 Guardrail / Validation", "type": "logic", "icon": "logic_policy_gate", "subtitle": "Hallucination & Limit Check", "resource": "Rule Engine", "operation": "Validate LLM Spoken Response", "credentialId": "cred_internal", "policyConfig": {"refund_max_limit": 2000, "exceeded_action": "Escalate to Human Supervisor"}, "x": 1500, "y": 300, "inputPayload": {"response_text": "Alex, your refund of ₹1,499 has been approved.", "policy_limit": 2000}, "outputPayload": {"guardrail_passed": true, "amount_valid": true}},
-    {"id": "node-11", "name": "node_11 TTS (Sarvam Indic)", "type": "trigger", "icon": "trig_voice", "subtitle": "Sarvam Indic Audio Stream", "resource": "Audio Synthesizer", "operation": "Synthesize Indic Audio Stream", "credentialId": "cred_sarvam_key", "x": 1860, "y": 240, "inputPayload": {"text": "Alex, your refund of ₹1,499 has been approved.", "voice": "ananya_indic"}, "outputPayload": {"audio_stream_status": "STREAMING", "latency_ms": 180}},
-    {"id": "node-12", "name": "node_12 Audio Out + Barge-in", "type": "trigger", "icon": "trig_voice", "subtitle": "WebRTC Speaker Stream", "resource": "Playback Stream", "operation": "Stream Audio to Caller", "credentialId": "cred_sarvam_key", "x": 2220, "y": 240, "inputPayload": {"barge_in_active": true}, "outputPayload": {"playback": "active", "barge_in_triggered": false}},
-    {"id": "node-13", "name": "node_13 Conversation Memory", "type": "db", "icon": "db_gateway", "subtitle": "MongoDB + Redis Persist", "resource": "Document Store", "operation": "Save Session Turn Record", "credentialId": "cred_mongo_prod", "x": 2220, "y": 420, "inputPayload": {"session_id": "sess-9921"}, "outputPayload": {"persisted": true, "turn_count": 4}},
-    {"id": "node-14", "name": "node_14 Analytics (Langfuse)", "type": "tool", "icon": "tool_gdrive", "subtitle": "Telemetry & Latency Tracker", "resource": "Analytics Gateway", "operation": "Log Latency & Token Usage", "credentialId": "cred_internal", "x": 2580, "y": 420, "inputPayload": {"total_latency_ms": 420, "tokens": 680}, "outputPayload": {"logged_to_langfuse": true}},
-    {"id": "node-15", "name": "node_15 Human Escalation Twilio", "type": "tool", "icon": "tool_human_escalate", "subtitle": "Supervisor Call Handoff", "resource": "Twilio Voice Handoff", "operation": "Route Call to Supervisor", "credentialId": "cred_internal", "x": 1860, "y": 540, "inputPayload": {"reason": "Customer Over-Limit or Frustrated"}, "outputPayload": {"escalated_to_supervisor": true, "queue_pos": 1}},
-    {"id": "node-16", "name": "node_16 CSAT Survey", "type": "tool", "icon": "tool_gmail", "subtitle": "Post-Call CSAT SMS/Email", "resource": "Survey Engine", "operation": "Trigger 1-5 CSAT Survey", "credentialId": "cred_google_oauth", "x": 2580, "y": 240, "inputPayload": {"customer_phone": "+91 9876543210"}, "outputPayload": {"survey_sent": true}},
-    {"id": "node-17", "name": "node_17 Email & SMS Dispatcher", "type": "tool", "icon": "tool_gmail", "subtitle": "SendGrid / Twilio API", "resource": "Email & SMS Gateway", "operation": "Send Receipt & Refund Details", "credentialId": "cred_google_oauth", "x": 1860, "y": 60, "inputPayload": {"email": "alex@company.com", "refund_id": "RF-2291"}, "outputPayload": {"email_delivered": true, "sms_delivered": true}},
-    {"id": "node-18", "name": "node_18 Greeting + Verification", "type": "ai", "icon": "ai_agent_worker", "subtitle": "Account Verification Turn", "resource": "Auth Agent", "operation": "Verify Caller Identity", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.1-70b-instruct", "prompt": "Greet caller and verify order number and phone identity.", "x": 60, "y": 600, "inputPayload": {"phone": "+91 9876543210"}, "outputPayload": {"verified": true, "customer_name": "Alex Morgan"}},
-    {"id": "node-19", "name": "node_19 Error/Fallback Controller", "type": "logic", "icon": "logic_policy_gate", "subtitle": "Global Retry & Fallback Engine", "resource": "Error Controller", "operation": "Wrap Node Execution Errors", "credentialId": "cred_internal", "x": 1140, "y": 540, "inputPayload": {"retry_attempts": 0}, "outputPayload": {"fallback_active": false}},
-    {"id": "node-20", "name": "node_20 Turn Manager", "type": "logic", "icon": "logic_if_else", "subtitle": "Latency Orchestrator", "resource": "Orchestration Layer", "operation": "Manage Cancel Tokens & Latency", "credentialId": "cred_internal", "x": 1140, "y": 60, "inputPayload": {"max_latency_budget_ms": 800}, "outputPayload": {"status": "HEALTHY", "budget_remaining_ms": 380}}
+    {"id": "node-20", "name": "node_20 Turn Manager", "type": "logic", "icon": "logic_if_else", "subtitle": "Latency Orchestrator", "resource": "Orchestration Layer", "operation": "Manage Cancel Tokens & Latency", "credentialId": "cred_internal", "x": 60, "y": 420, "inputPayload": {"max_latency_budget_ms": 800}, "outputPayload": {"status": "HEALTHY", "budget_remaining_ms": 380}},
+    {"id": "node-18", "name": "node_18 Greeting + Verification", "type": "ai", "icon": "ai_agent_worker", "subtitle": "Account Verification Turn", "resource": "Auth Agent", "operation": "Verify Caller Identity", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.1-70b-instruct", "prompt": "Greet caller and verify order number and phone identity.", "x": 400, "y": 180, "inputPayload": {"phone": "+91 9876543210"}, "outputPayload": {"verified": true, "customer_name": "Alex Morgan"}},
+    {"id": "node-2", "name": "node_02 STT + Diarization", "type": "trigger", "icon": "trig_voice", "subtitle": "Sarvam Indic STT Stream", "resource": "Speech Transcriber", "operation": "Transcribe Indic Audio", "credentialId": "cred_sarvam_key", "x": 400, "y": 420, "inputPayload": {"language": "ta-IN", "audio_buffer": "stream_blob"}, "outputPayload": {"transcript": "வணக்கம், order #4821 saree arrived damaged.", "stt_confidence": 0.98}},
+    {"id": "node-7", "name": "node_07 Customer Memory (Redis)", "type": "db", "icon": "db_gateway", "subtitle": "Redis / Session Buffer", "resource": "Key-Value State", "operation": "Read Customer Session History", "dbEngine": "Redis", "credentialId": "cred_mongo_prod", "x": 740, "y": 180, "inputPayload": {"customer_id": "cust_8891"}, "outputPayload": {"prior_orders": 3, "vip_tier": "Gold", "csat_avg": 4.8}},
+    {"id": "node-3", "name": "node_03 Intent Classifier", "type": "ai", "icon": "ai_agent_worker", "subtitle": "NVIDIA Llama 3.1 70B Router", "resource": "Agent Reasoning Turn", "operation": "Classify Intent & Route", "credentialId": "cred_nvidia_env", "model": "nvidia/llama-3.1-nemotron-70b-instruct", "prompt": "Classify intent into ORDER_QUERY, POLICY_RAG, REPLACEMENT_REFUND, or HUMAN_ESCALATE.", "x": 740, "y": 420, "inputPayload": {"transcript": "order #4821 saree arrived damaged"}, "outputPayload": {"intent": "REPLACEMENT_OR_REFUND", "confidence": 0.98}},
+    {"id": "node-4", "name": "node_04 Order DB (Postgres/Mongo)", "type": "db", "icon": "db_gateway", "subtitle": "MongoDB Atlas Collection", "resource": "Document / Record", "operation": "Execute Query / Find Document", "dbEngine": "MongoDB", "connectionUrl": "mongodb://localhost:27017/ai_workforce", "credentialId": "cred_mongo_prod", "x": 1080, "y": 60, "inputPayload": {"order_id": "4821"}, "outputPayload": {"order_id": "4821", "customer": "Alex Morgan", "item": "Kanjivaram Silk Saree", "total": 1499, "status": "Delivered"}},
+    {"id": "node-5", "name": "node_05 Policy RAG (ChromaDB)", "type": "knowledge", "icon": "kb_vector", "subtitle": "384-dim Dense Embeddings", "resource": "Vector Store", "operation": "Vector Similarity Search", "credentialId": "cred_mongo_prod", "ragConfig": {"collection_name": "support_policies", "transformer_model": "sentence-transformers/all-MiniLM-L6-v2", "vector_dimension": 384}, "x": 1080, "y": 240, "inputPayload": {"query": "Saree damage return window"}, "outputPayload": {"top_chunk": "Damaged saree items eligible for instant replacement/refund within 7 days.", "similarity": 0.94}},
+    {"id": "node-6", "name": "node_06 Vision Damage (Llama 3.2)", "type": "ai", "icon": "ai_vision_inspector", "subtitle": "Meta Llama 3.2 11B Vision", "resource": "Visual Inspection", "operation": "Analyze Photo Defect", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.2-11b-vision-instruct", "image_url": "https://storage.googleapis.com/demo/damaged_saree.jpg", "prompt": "Inspect saree photo {{ $json.image_url }} for fabric tear defect.", "x": 1080, "y": 420, "inputPayload": {"image_url": "https://storage.googleapis.com/demo/damaged_saree.jpg"}, "outputPayload": {"damage_detected": true, "defect_category": "FABRIC_TEAR", "confidence": 0.96}},
+    {"id": "node-19", "name": "node_19 Error/Fallback Controller", "type": "logic", "icon": "logic_policy_gate", "subtitle": "Global Retry & Fallback Engine", "resource": "Error Controller", "operation": "Wrap Node Execution Errors", "credentialId": "cred_internal", "x": 1080, "y": 600, "inputPayload": {"retry_attempts": 0}, "outputPayload": {"fallback_active": false}},
+    {"id": "node-8", "name": "node_08 Context Agg + Response Gen", "type": "ai", "icon": "ai_agent_worker", "subtitle": "NVIDIA Llama 3.1 70B LLM", "resource": "Agent Reasoning Turn", "operation": "Synthesize Spoken Response", "credentialId": "cred_nvidia_env", "model": "meta/llama-3.1-70b-instruct", "prompt": "Synthesize empathetic spoken turn confirming refund under ₹2,000 policy limit.", "x": 1420, "y": 240, "inputPayload": {"order_amount": 1499, "damage_verified": true}, "outputPayload": {"response_text": "Alex, your refund of ₹1,499 has been approved and initiated.", "tool_call": "process_refund"}},
+    {"id": "node-10", "name": "node_10 Guardrail / Validation", "type": "logic", "icon": "logic_policy_gate", "subtitle": "Hallucination & Limit Check", "resource": "Rule Engine", "operation": "Validate LLM Spoken Response", "credentialId": "cred_internal", "policyConfig": {"refund_max_limit": 2000, "exceeded_action": "Escalate to Human Supervisor"}, "x": 1420, "y": 460, "inputPayload": {"response_text": "Alex, your refund of ₹1,499 has been approved.", "policy_limit": 2000}, "outputPayload": {"guardrail_passed": true, "amount_valid": true}},
+    {"id": "node-9", "name": "node_09 Action Executor (n8n)", "type": "tool", "icon": "tool_gdrive", "subtitle": "Payment / ERP Dispatch", "resource": "Stripe / Razorpay API", "operation": "Execute Refund Payout", "credentialId": "cred_payment_gateway", "x": 1760, "y": 100, "inputPayload": {"order_id": "4821", "amount": 1499, "idempotency_key": "IK-8821"}, "outputPayload": {"payout_status": "SUCCESS", "refund_id": "RF-2291"}},
+    {"id": "node-11", "name": "node_11 TTS (Sarvam Indic)", "type": "trigger", "icon": "trig_voice", "subtitle": "Sarvam Indic Audio Stream", "resource": "Audio Synthesizer", "operation": "Synthesize Indic Audio Stream", "credentialId": "cred_sarvam_key", "x": 1760, "y": 320, "inputPayload": {"text": "Alex, your refund of ₹1,499 has been approved.", "voice": "ananya_indic"}, "outputPayload": {"audio_stream_status": "STREAMING", "latency_ms": 180}},
+    {"id": "node-15", "name": "node_15 Human Escalation Twilio", "type": "tool", "icon": "tool_human_escalate", "subtitle": "Supervisor Call Handoff", "resource": "Twilio Voice Handoff", "operation": "Route Call to Supervisor", "credentialId": "cred_internal", "x": 1760, "y": 540, "inputPayload": {"reason": "Customer Over-Limit or Frustrated"}, "outputPayload": {"escalated_to_supervisor": true, "queue_pos": 1}},
+    {"id": "node-17", "name": "node_17 Email & SMS Dispatcher", "type": "tool", "icon": "tool_gmail", "subtitle": "SendGrid / Twilio API", "resource": "Email & SMS Gateway", "operation": "Send Receipt & Refund Details", "credentialId": "cred_google_oauth", "x": 2100, "y": 100, "inputPayload": {"email": "alex@company.com", "refund_id": "RF-2291"}, "outputPayload": {"email_delivered": true, "sms_delivered": true}},
+    {"id": "node-12", "name": "node_12 Audio Out + Barge-in", "type": "trigger", "icon": "trig_voice", "subtitle": "WebRTC Speaker Stream", "resource": "Playback Stream", "operation": "Stream Audio to Caller", "credentialId": "cred_sarvam_key", "x": 2100, "y": 320, "inputPayload": {"barge_in_active": true}, "outputPayload": {"playback": "active", "barge_in_triggered": false}},
+    {"id": "node-13", "name": "node_13 Conversation Memory", "type": "db", "icon": "db_gateway", "subtitle": "MongoDB + Redis Persist", "resource": "Document Store", "operation": "Save Session Turn Record", "credentialId": "cred_mongo_prod", "x": 2440, "y": 320, "inputPayload": {"session_id": "sess-9921"}, "outputPayload": {"persisted": true, "turn_count": 4}},
+    {"id": "node-14", "name": "node_14 Analytics (Langfuse)", "type": "tool", "icon": "tool_gdrive", "subtitle": "Telemetry & Latency Tracker", "resource": "Analytics Gateway", "operation": "Log Latency & Token Usage", "credentialId": "cred_internal", "x": 2780, "y": 320, "inputPayload": {"total_latency_ms": 420, "tokens": 680}, "outputPayload": {"logged_to_langfuse": true}},
+    {"id": "node-16", "name": "node_16 CSAT Survey", "type": "tool", "icon": "tool_gmail", "subtitle": "Post-Call CSAT SMS/Email", "resource": "Survey Engine", "operation": "Trigger 1-5 CSAT Survey", "credentialId": "cred_google_oauth", "x": 3120, "y": 320, "inputPayload": {"customer_phone": "+91 9876543210"}, "outputPayload": {"survey_sent": true}}
   ];
 
   const DEFAULT_INTERVIEWER_NODES: NodeData[] = [
@@ -326,7 +441,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     { id: "c21", fromId: "node-14", toId: "node-16" },
     { id: "c22", fromId: "node-19", toId: "node-11" },
     { id: "c23", fromId: "node-19", toId: "node-15" },
-    { id: "c24", fromId: "node-20", toId: "node-1" }
+    { id: "c24", fromId: "node-20", toId: "node-1" },
+    { id: "c25", fromId: "node-3", toId: "node-19" }
   ];
 
   const DEFAULT_INTERVIEWER_CONNECTIONS: ConnectionData[] = [
@@ -376,6 +492,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     }
     return DEFAULT_SUPPORT_NODES;
   });
+
+  // Dynamic Flow Bounds Calculation for Minimap
+  const nodesMinX = Math.min(...(nodes.length > 0 ? nodes.map(n => n.x) : [0]), 0);
+  const nodesMaxX = Math.max(...(nodes.length > 0 ? nodes.map(n => n.x + 280) : [3000]), 3000);
+  const nodesMinY = Math.min(...(nodes.length > 0 ? nodes.map(n => n.y) : [0]), 0);
+  const nodesMaxY = Math.max(...(nodes.length > 0 ? nodes.map(n => n.y + 160) : [2000]), 2000);
+  const dynamicContentWidth = Math.max(nodesMaxX - nodesMinX + 100, 1200);
+  const dynamicContentHeight = Math.max(nodesMaxY - nodesMinY + 100, 1000);
 
   // Canvas State: Connections
   const [connections, setConnections] = useState<ConnectionData[]>(() => {
@@ -1046,7 +1170,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setTimeout(() => {
       setIsExecuting(false);
       setExecutionToast({ 
-        message: `🎉 Workflow Execution Completed in 1.18s! Opening Deployed Agent App...`, 
+        message: `🎉 Workflow Execution Completed in 1.18s! Launching Real-Time Voice Call Session...`, 
         type: 'success' 
       });
 
@@ -1060,9 +1184,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       };
       onRunFinished(newRun);
 
-      // Automatically launch the live deployed app UI modal!
+      // Automatically launch the real-time voice call session UI modal after test run!
       setTimeout(() => {
-        setShowLiveAppModal(true);
+        setShowVoiceCallModal(true);
+        if (callTurns.length === 0) {
+          const initialGreeting = currentWorkflowId === 'proj_interviewer_02'
+            ? "Hello Rahul! Welcome to your Technical AI Engineer Interview. I've loaded your resume. Are you ready for Question 1?"
+            : "வணக்கம்! Welcome to Sarvam Voice Support. How can I assist with your order today?";
+          setCallTurns([{
+            id: 'init_1',
+            sender: 'agent',
+            text: initialGreeting,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            nodeStep: 'Node 1: Voice Call Intake'
+          }]);
+          speakTextWithBrowserTTS(initialGreeting);
+        }
         setExecutionToast(null);
       }, 1200);
     }, totalDuration);
@@ -1198,7 +1335,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               <input
                 type="text"
                 value={workflowTitle}
-                onChange={(e) => { setWorkflowTitle(e.target.value); markDirty(); }}
+                onChange={(e) => setWorkflowTitle(e.target.value)}
                 onBlur={handleSaveTitle}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(); }}
                 autoFocus
@@ -1255,28 +1392,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
           </label>
 
-          <button 
-            onClick={() => {
-              setShowVoiceCallModal(true);
-              if (callTurns.length === 0) {
-                const initialGreeting = currentWorkflowId === 'proj_interviewer_02'
-                  ? "Hello Rahul! Welcome to your Technical AI Engineer Interview. I've loaded your resume. Are you ready for Question 1?"
-                  : "வணக்கம்! Welcome to Sarvam Voice Support. How can I assist with your order today?";
-                setCallTurns([{
-                  id: 'init_1',
-                  sender: 'agent',
-                  text: initialGreeting,
-                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  nodeStep: 'Node 1: Voice Call Intake'
-                }]);
-                speakTextWithBrowserTTS(initialGreeting);
-              }
-            }}
-            className="bg-[#0F766E] hover:bg-[#0d645e] text-white text-xs py-1 px-3 flex items-center space-x-1.5 font-bold rounded-xl shadow-md transition-all shrink-0"
-          >
-            <Mic className="w-3.5 h-3.5 animate-pulse" />
-            <span>Real-Time Voice Call</span>
-          </button>
 
           <button 
             onClick={handleExecuteWholeWorkflow}
@@ -1390,7 +1505,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
         {/* SCROLLABLE CANVAS GRID SURFACE */}
         <div 
-          className="w-full h-full cursor-crosshair overflow-auto"
+          ref={canvasContainerRef}
+          onScroll={handleScrollCanvas}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+          className={`w-full h-full overflow-auto select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
           style={{
             backgroundImage: 'radial-gradient(#D6CFBF 1.3px, transparent 1.3px)',
             backgroundSize: '24px 24px'
@@ -1408,17 +1529,27 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             className="relative"
           >
             {/* Curved Bezier Connection Lines with Deletion Midpoint Button */}
-            <svg className="absolute inset-0 w-[3000px] h-[3000px] pointer-events-none z-10">
+            <svg className="absolute inset-0 w-[3600px] h-[3000px] pointer-events-none z-10">
               {connections.map(conn => {
                 const fromNode = nodes.find(n => n.id === conn.fromId);
                 const toNode = nodes.find(n => n.id === conn.toId);
                 if (!fromNode || !toNode) return null;
                 const x1 = fromNode.x + 256;
-                const y1 = fromNode.y + 45;
+                const y1 = fromNode.y + 65;
                 const x2 = toNode.x;
-                const y2 = toNode.y + 45;
-                const dx = Math.abs(x2 - x1) * 0.5;
-                const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+                const y2 = toNode.y + 65;
+
+                let pathD = '';
+                if (x2 >= x1) {
+                  const dx = Math.max(40, (x2 - x1) * 0.5);
+                  pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+                } else {
+                  // Backward or same-column loop curve
+                  const dy = y2 - y1;
+                  const curveOffset = Math.max(80, Math.abs(dy) * 0.4);
+                  pathD = `M ${x1} ${y1} C ${x1 + curveOffset} ${y1 + (dy >= 0 ? 40 : -40)}, ${x2 - curveOffset} ${y2 + (dy >= 0 ? -40 : 40)}, ${x2} ${y2}`;
+                }
+
                 const midX = (x1 + x2) / 2;
                 const midY = (y1 + y2) / 2;
 
@@ -1553,6 +1684,99 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* INTERACTIVE CANVAS MINIMAP OVERLAY WIDGET (Claude / n8n Warm Theme) */}
+      <div 
+        style={{ right: `${minimapPos.right}px`, bottom: `${minimapPos.bottom}px` }}
+        className="fixed z-40 flex flex-col items-end space-y-1.5 shadow-2xl rounded-2xl select-none"
+      >
+        {/* Floating Draggable Header Button */}
+        <div 
+          onMouseDown={handleMinimapDragStart}
+          className="flex items-center space-x-2 bg-[#FAF8F5] hover:bg-[#F4F1EA] text-[#2B2826] px-3.5 py-1.5 rounded-xl border border-[#E6E1D7] shadow-md text-xs font-extrabold cursor-grab active:cursor-grabbing transition-all"
+          title="Drag header to move minimap floating widget anywhere on screen"
+        >
+          <div className="flex items-center space-x-1.5">
+            <Map className="w-3.5 h-3.5 text-[#D97757]" />
+            <span>Workflow Minimap</span>
+            <span className="text-[10px] bg-[#E6E1D7] text-[#2B2826] px-1.5 py-0.5 rounded-md font-mono">
+              {nodes.length}
+            </span>
+          </div>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowMinimap(!showMinimap); }}
+            className="text-[#9B9488] hover:text-[#2B2826] ml-1 p-0.5 rounded hover:bg-[#E6E1D7]/50"
+            title="Collapse / Expand Minimap"
+          >
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMinimap ? '' : 'rotate-180'}`} />
+          </button>
+        </div>
+
+        {/* Dynamic Minimap Content Window */}
+        {showMinimap && (
+          <div 
+            onClick={handleMinimapClick}
+            className="w-[240px] h-[140px] bg-[#FAF8F5]/95 backdrop-blur-md border-2 border-[#E6E1D7] hover:border-[#D97757] rounded-2xl shadow-xl relative overflow-hidden cursor-crosshair transition-all"
+            title="Click or drag on Minimap to jump viewport location"
+          >
+            {/* Minimap Grid Dots */}
+            <div 
+              className="absolute inset-0 opacity-40 pointer-events-none"
+              style={{
+                backgroundImage: 'radial-gradient(#D6CFBF 1.2px, transparent 1.2px)',
+                backgroundSize: '12px 12px'
+              }}
+            />
+
+            {/* Mini Connection Lines */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
+              {connections.map(conn => {
+                const fromNode = nodes.find(n => n.id === conn.fromId);
+                const toNode = nodes.find(n => n.id === conn.toId);
+                if (!fromNode || !toNode) return null;
+                const mx1 = (fromNode.x / dynamicContentWidth) * 240 + 8;
+                const my1 = (fromNode.y / dynamicContentHeight) * 140 + 4;
+                const mx2 = (toNode.x / dynamicContentWidth) * 240;
+                const my2 = (toNode.y / dynamicContentHeight) * 140 + 4;
+                return (
+                  <line key={conn.id} x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="#D97757" strokeWidth="1.2" />
+                );
+              })}
+            </svg>
+
+            {/* Miniature Node Dots (Real-Time Live Updating!) */}
+            {nodes.map(n => {
+              const mx = (n.x / dynamicContentWidth) * 240;
+              const my = (n.y / dynamicContentHeight) * 140;
+              const color = n.type === 'ai' ? '#D97757' : n.type === 'db' ? '#10B981' : n.type === 'trigger' ? '#3B82F6' : '#8B5CF6';
+
+              return (
+                <div
+                  key={n.id}
+                  onClick={(e) => { e.stopPropagation(); handleFocusNode(n); }}
+                  style={{ left: `${mx}px`, top: `${my}px`, backgroundColor: color }}
+                  className="absolute w-4 h-2.5 rounded-xs border border-white shadow-xs cursor-pointer hover:scale-150 hover:ring-2 hover:ring-[#D97757] transition-transform"
+                  title={`Click to center on: ${n.name}`}
+                />
+              );
+            })}
+
+            {/* Active Viewport Frame Rectangle */}
+            {canvasContainerRef.current && (
+              <div
+                style={{
+                  left: `${((viewport.scrollLeft / (zoomScale / 100)) / dynamicContentWidth) * 240}px`,
+                  top: `${((viewport.scrollTop / (zoomScale / 100)) / dynamicContentHeight) * 140}px`,
+                  width: `${Math.min(240, ((viewport.clientWidth / (zoomScale / 100)) / dynamicContentWidth) * 240)}px`,
+                  height: `${Math.min(140, ((viewport.clientHeight / (zoomScale / 100)) / dynamicContentHeight) * 140)}px`
+                }}
+                className="absolute border-2 border-[#D97757] bg-[#D97757]/15 rounded-lg pointer-events-none shadow-md transition-all"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* FLOATING EXECUTION JSON DATA INSPECTOR SIDE PANEL */}

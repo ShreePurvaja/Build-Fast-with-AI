@@ -1,13 +1,14 @@
 import { auth } from "./firebase";
 import { signInWithCustomToken } from "firebase/auth";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim()) ? process.env.NEXT_PUBLIC_API_URL.trim() : "http://localhost:8000";
 
 let lastPhone = null;
 
 export async function sendPhoneOTP(phoneNumber, extra = {}) {
   lastPhone = phoneNumber;
-  const res = await fetch(`${API}/api/auth/send-phone-otp`, {
+  const baseUrl = "http://localhost:8000";
+  const res = await fetch(`${baseUrl}/api/auth/send-phone-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone: phoneNumber, ...extra }),
@@ -20,7 +21,8 @@ export async function sendPhoneOTP(phoneNumber, extra = {}) {
 }
 
 export async function verifyPhoneOTP(otpCode, phoneNumber = lastPhone, extra = {}) {
-  const res = await fetch(`${API}/api/auth/verify-phone-otp`, {
+  const baseUrl = API || "http://localhost:8000";
+  const res = await fetch(`${baseUrl}/api/auth/verify-phone-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone: phoneNumber, otp: otpCode, ...extra }),

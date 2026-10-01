@@ -68,6 +68,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       org_name: orgName || 'Enterprise Workspace'
     };
     
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_info', JSON.stringify(userObj));
+      localStorage.setItem('active_tab', 'projects');
+    }
+
     // Automatically save or update user in Firestore after any successful passwordless auth
     const uid = userObj.id || data.uid || userObj.uid || `usr_${(userObj.email || userObj.phone || 'anonymous').replace(/[^a-zA-Z0-9]/g, '')}`;
     saveUserToFirestore({
@@ -359,7 +364,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       const googleUser = await signInWithGoogle();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api/auth/google`, {
         method: 'POST',
         credentials: 'include',
@@ -395,6 +400,31 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       setLoading(false);
       setMsg({ type: 'error', text: err.message || 'Google authentication failed' });
     }
+  };
+
+  // 5. Direct 1-Click Instant Demo Login (0 Verification Steps)
+  const handleDemoLogin = () => {
+    setLoading(true);
+    setMsg(null);
+
+    fetch('http://localhost:8000/api/auth/demo-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setLoading(false);
+        if (data.success || data.verified) {
+          setMsg({ type: 'success', text: 'Logging into Demo Account...' });
+          setTimeout(() => handleAuthCompletion(data), 300);
+        } else {
+          setMsg({ type: 'error', text: 'Failed to access demo account.' });
+        }
+      })
+      .catch(() => {
+        setLoading(false);
+        setMsg({ type: 'error', text: 'Server connection error during demo login.' });
+      });
   };
 
   const handleOtpDigitChange = (index: number, val: string) => {
@@ -449,8 +479,43 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           {mode === 'login' ? 'Sign In to Workspace' : 'Create Your Account'}
         </h2>
         <p className="text-xs text-[#6E685E] mt-1 font-medium">
-          Multi-Agent Platform • 100% Passwordless Real-Time OTP Verification
+          Multi-Agent Platform • Instant Demo or Verified Passwordless Sign-In
         </p>
+      </div>
+
+      {/* 1-CLICK INSTANT DEMO ACCOUNT LOGIN */}
+      <div className="mb-6 p-4 bg-[#FDF3E9] border-1.5 border-[#D97757]/40 rounded-2xl shadow-2xs">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#D97757] animate-ping" />
+            <span className="font-extrabold text-xs text-[#2B2826] uppercase tracking-wider">Demo Account</span>
+          </div>
+          <span className="bg-[#D97757]/15 text-[#D97757] font-bold text-[10px] px-2 py-0.5 rounded-full border border-[#D97757]/30">
+            No Login Needed
+          </span>
+        </div>
+        <p className="text-[11.5px] text-[#6E685E] font-medium leading-relaxed mb-3">
+          Bypass verification instantly and explore all 4 pre-built workflows & live execution tools under <b>demo@company.com</b>.
+        </p>
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={loading}
+          className="w-full bg-[#D97757] hover:bg-[#C96646] text-white font-extrabold text-xs py-2.5 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center space-x-2"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              <span>Instant Demo Login (1-Click Direct Access)</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="relative flex py-2 items-center mb-5">
+        <div className="flex-grow border-t border-[#E6E1D7]"></div>
+        <span className="shrink-0 mx-3 text-[11px] font-bold text-[#9B9488] uppercase">Or Authenticate Personal Account</span>
+        <div className="flex-grow border-t border-[#E6E1D7]"></div>
       </div>
 
       {/* Mode Switcher Tabs (Sign In vs Create Account) */}

@@ -42,57 +42,99 @@ export default function Home() {
     }
   ]);
 
-  // Check authenticated session strictly on client mount
+  // Tab switcher wrapper that also persists active tab
+  const changeTab = (tab: 'landing' | 'auth' | 'projects' | 'editor' | 'workflow-dashboard' | 'analytics' | 'executions' | 'escalations' | 'kb' | 'memory') => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined' && tab !== 'auth') {
+      localStorage.setItem('active_tab', tab);
+    }
+  };
+
+  // Check authenticated session strictly on client mount & restore cached session
   useEffect(() => {
     setMounted(true);
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const cachedUserStr = typeof window !== 'undefined' ? localStorage.getItem('user_info') : null;
+    const savedTab = typeof window !== 'undefined' ? (localStorage.getItem('active_tab') as any) : null;
 
-    if (!token) {
+    let restoredUser: UserState | null = null;
+    if (cachedUserStr) {
+      try {
+        restoredUser = JSON.parse(cachedUserStr);
+      } catch (e) {}
+    }
+
+    if (restoredUser) {
+      setUser(restoredUser);
+      if (savedTab && savedTab !== 'auth') {
+        setActiveTab(savedTab);
+      } else {
+        setActiveTab('projects');
+      }
+    } else if (!token) {
       setUser(null);
       setActiveTab('auth');
       setProjects([]);
       return;
     }
 
-    // Verify session token with backend
-    fetch('http://localhost:8000/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Session invalid or expired');
-        return res.json();
+    // Verify session token with backend (syncs latest user profile & workflows)
+    if (token) {
+      fetch('http://localhost:8000/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
-      .then(data => {
-        if (data && data.user) {
-          setUser(data.user);
-          setActiveTab('projects');
+        .then(res => {
+          if (res.status === 401) {
+            throw new Error('UNAUTHORIZED');
+          }
+          if (!res.ok) throw new Error('SERVER_NOTICE');
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.user) {
+            setUser(data.user);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('user_info', JSON.stringify(data.user));
+            }
+            if (!restoredUser && (!savedTab || savedTab === 'auth')) {
+              setActiveTab('projects');
+            }
 
-          // Fetch only this user's authenticated workflows
-          fetch('http://localhost:8000/api/workflows', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-            .then(res => res.json())
-            .then(wData => {
-              if (wData && (wData.workflows || wData.projects)) {
-                setProjects(wData.workflows || wData.projects);
-              }
+            // Fetch only this user's authenticated workflows
+            fetch('http://localhost:8000/api/workflows', {
+              headers: { 'Authorization': `Bearer ${token}` }
             })
-            .catch(() => {});
-        } else {
-          throw new Error('User not found');
-        }
-      })
-      .catch(() => {
-        // Expired/invalid session: enforce complete logout and clean storage
-        localStorage.removeItem('access_token');
-        setUser(null);
-        setActiveTab('auth');
-        setProjects([]);
-      });
+              .then(res => res.json())
+              .then(wData => {
+                if (wData && (wData.workflows || wData.projects)) {
+                  setProjects(wData.workflows || wData.projects);
+                }
+              })
+              .catch(() => {});
+          }
+        })
+        .catch(err => {
+          // Only clear session if explicitly 401 Unauthorized from backend
+          if (err.message === 'UNAUTHORIZED') {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('user_info');
+              localStorage.removeItem('active_tab');
+            }
+            setUser(null);
+            setActiveTab('auth');
+            setProjects([]);
+          }
+        });
+    }
   }, []);
 
   const handleLoginSuccess = (userData: UserState) => {
     setUser(userData);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_info', JSON.stringify(userData));
+      localStorage.setItem('active_tab', 'projects');
+    }
     setActiveTab('projects');
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -112,6 +154,8 @@ export default function Home() {
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user_info');
+      localStorage.removeItem('active_tab');
     }
     setUser(null);
     setActiveProject(null);
@@ -121,18 +165,18 @@ export default function Home() {
 
   const handleOpenCanvas = (proj: any) => {
     setActiveProject(proj);
-    setActiveTab('editor');
+    changeTab('editor');
   };
 
   const handleOpenWorkflowDashboard = (proj: any) => {
     setActiveProject(proj);
-    setActiveTab('workflow-dashboard');
+    changeTab('workflow-dashboard');
   };
 
   const handleCreateProject = (newProj: any) => {
     setProjects(prev => [newProj, ...prev]);
     setActiveProject(newProj);
-    setActiveTab('workflow-dashboard');
+    changeTab('workflow-dashboard');
   };
 
   const handleRunFinished = (newRun: any) => {
@@ -160,10 +204,10 @@ export default function Home() {
         <div className="flex flex-col min-h-screen w-full">
           <main className="flex-1 w-full">
             <LandingPage 
-              onStartBuilding={() => setActiveTab(user ? 'projects' : 'auth')}
-              onExploreProjects={() => setActiveTab(user ? 'projects' : 'auth')}
-              onOpenAnalytics={() => setActiveTab(user ? 'analytics' : 'auth')}
-              onOpenMemory={() => setActiveTab(user ? 'projects' : 'auth')}
+              onStartBuilding={() => changeTab(user ? 'projects' : 'auth')}
+              onExploreProjects={() => changeTab(user ? 'projects' : 'auth')}
+              onOpenAnalytics={() => changeTab(user ? 'analytics' : 'auth')}
+              onOpenMemory={() => changeTab(user ? 'projects' : 'auth')}
             />
           </main>
         </div>
@@ -176,13 +220,13 @@ export default function Home() {
               activeTab={currentTab}
               setActiveTab={(tab) => {
                 if (!user && tab !== 'landing') {
-                  setActiveTab('auth');
+                  changeTab('auth');
                 } else {
-                  setActiveTab(tab);
+                  changeTab(tab);
                 }
               }}
               user={user}
-              onOpenCreateProject={() => setActiveTab('projects')}
+              onOpenCreateProject={() => changeTab('projects')}
               onLogout={handleLogout}
             />
           )}
