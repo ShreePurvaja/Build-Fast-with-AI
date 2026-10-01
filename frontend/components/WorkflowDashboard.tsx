@@ -150,14 +150,6 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#D97757]' : ''}`} />
           </button>
-
-          <button 
-            onClick={() => onOpenCanvas(wf)}
-            className="btn-claude-primary text-xs py-2.5 px-4 font-bold flex items-center gap-2 shadow-xs"
-          >
-            <Layers className="w-4 h-4" />
-            <span>Open in Canvas Studio</span>
-          </button>
         </div>
       </div>
 
