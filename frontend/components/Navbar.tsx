@@ -39,7 +39,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   const handleSelectTab = (tabId: typeof activeTab) => {
-    setActiveTab(tabId);
+    if (!user && tabId !== 'landing') {
+      setActiveTab('auth');
+    } else {
+      setActiveTab(tabId);
+    }
     setDrawerOpen(false);
   };
 
@@ -60,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button 
-            onClick={() => handleSelectTab('projects')}
+            onClick={() => handleSelectTab(user ? 'projects' : 'auth')}
             className="flex items-center space-x-2.5 text-left hover:opacity-90 transition-opacity"
           >
             <div className="w-8 h-8 rounded-xl bg-[#D97757] text-white flex items-center justify-center font-extrabold text-sm shadow-xs">
