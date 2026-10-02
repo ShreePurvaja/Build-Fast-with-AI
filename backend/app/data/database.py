@@ -95,71 +95,82 @@ CANDIDATES_DB: Dict[str, Dict[str, Any]] = {
 
 def ensure_user_domain_data(customer_id: str, customer_name: str):
     """
-    Ensures ANY user account (Gowtham D, Alex, Kavitha, Rajesh, or any new user)
-    has structured DB records across Support, Sales, Booking, and HR workflows.
+    Ensures ANY user account (Gowtham D, Demo, or any newly registered user)
+    has authentic starting baseline DB records across Support, Sales, Booking, and HR.
     """
-    # Check if orders exist for customer_id
     user_orders = [o for o in ORDERS_DB.values() if o["customer_id"] == customer_id]
     if not user_orders:
-        ord1_id = f"ORD-{abs(hash(customer_id)) % 8000 + 1000}"
-        ord2_id = f"ORD-{abs(hash(customer_id + '2')) % 8000 + 1000}"
+        ord1_id = f"ORD-{abs(hash(customer_id)) % 8000 + 1000}" if customer_id != "cust_gowtham" else "ORD-8821"
+        ord2_id = f"ORD-{abs(hash(customer_id + '2')) % 8000 + 1000}" if customer_id != "cust_gowtham" else "ORD-8822"
+        ord3_id = f"ORD-{abs(hash(customer_id + '3')) % 8000 + 1000}" if customer_id != "cust_gowtham" else "ORD-8823"
         
         ORDERS_DB[ord1_id] = {
             "id": ord1_id,
             "customer_id": customer_id,
             "customer_name": customer_name,
-            "item_name": "Smart Fitness Watch",
-            "price": 1999,
+            "item_name": "Kanjivaram Silk Saree",
+            "price": 1499,
             "status": "delivered",
-            "delivery_date": "Yesterday",
-            "courier": "Express Logistics",
+            "delivery_date": "Oct 1, 2026",
+            "courier": "Express Courier",
             "can_refund": True
         }
         ORDERS_DB[ord2_id] = {
             "id": ord2_id,
             "customer_id": customer_id,
             "customer_name": customer_name,
-            "item_name": "Bluetooth Speaker",
-            "price": 1299,
+            "item_name": "Wireless Noise-Canceling Earbuds",
+            "price": 2999,
             "status": "out_for_delivery",
-            "expected_delivery": "Today by 5:00 PM",
-            "courier": "BlueDart",
+            "expected_delivery": "Today by 4:00 PM",
+            "courier": "BlueDart Express",
+            "can_refund": False
+        }
+        ORDERS_DB[ord3_id] = {
+            "id": ord3_id,
+            "customer_id": customer_id,
+            "customer_name": customer_name,
+            "item_name": "Cotton Formal Shirt (Blue)",
+            "price": 899,
+            "status": "processing",
+            "expected_delivery": "Oct 4, 2026",
+            "courier": "Delhivery",
             "can_refund": False
         }
 
     if customer_id not in LEADS_DB:
         LEADS_DB[customer_id] = {
             "customer_id": customer_id,
-            "company": f"{customer_name} Enterprises",
-            "seats": 25,
-            "budget": "1.0 Lakh/mo",
+            "company": f"{customer_name} Tech Solutions",
+            "seats": 50,
+            "budget": "1.5 Lakhs/mo",
             "stage": "demo_scheduled",
-            "demo_time": "Tomorrow at 2:00 PM IST",
-            "rep": "Senior Sales Manager (Priya)"
+            "demo_time": "Oct 3, 2026 at 3:00 PM IST",
+            "rep": "Senior Account Exec (Rahul)"
         }
 
     if customer_id not in APPOINTMENTS_DB:
         APPOINTMENTS_DB[customer_id] = {
-            "appointment_id": f"APT-{abs(hash(customer_id)) % 8000 + 1000}",
+            "appointment_id": "APT-7721",
             "customer_name": customer_name,
-            "doctor": "Dr. Rajesh (General Physician)",
-            "clinic": "City Health Care Desk",
-            "slot_time": "Tomorrow at 11:00 AM",
-            "fee": "₹500",
+            "doctor": "Dr. Anitha (Cardiology Specialist)",
+            "clinic": "Apollo Clinic, T-Nagar",
+            "slot_time": "Oct 4, 2026 at 10:30 AM",
+            "fee": "₹800",
             "status": "confirmed"
         }
 
     if customer_id not in CANDIDATES_DB:
         CANDIDATES_DB[customer_id] = {
-            "candidate_id": f"CAND-{abs(hash(customer_id)) % 800 + 100}",
+            "candidate_id": "CAND-901",
             "name": customer_name,
-            "role": "Software Engineer",
-            "tech_stack": "Python, JavaScript, SQL",
+            "role": "Senior Full Stack Engineer",
+            "tech_stack": "Python, React, FastAPI, MongoDB",
             "notice_period": "30 days",
-            "expected_salary": "₹12 Lakhs/yr",
-            "screening_score": 88,
+            "expected_salary": "₹18 Lakhs/yr",
+            "screening_score": 92,
             "status": "tech_screen_passed",
-            "interview_time": "Oct 6, 2026 at 4:00 PM"
+            "interview_time": "Oct 5, 2026 at 11:00 AM"
         }
 
 # Escalation Queue

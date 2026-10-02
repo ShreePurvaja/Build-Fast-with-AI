@@ -23,6 +23,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Depends, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from app.data.database import ensure_user_domain_data
 
 
 # -----------------------------------------------------------------------------
@@ -688,9 +689,12 @@ def generate_tailored_workflow_canvas(name: str, vertical: str, description: str
 
 def seed_default_mongo_data(user_id: str):
     workflows_col = mongo.get_collection("workflows")
+    vector_col = mongo.get_collection("vector_store")
     
-    # Always refresh default workflows to enforce full 20-node Support & 23-node Interviewer DAGs
-    workflows_col.delete_many({"user_id": user_id, "id": {"$in": ["proj_support_01", "proj_interviewer_02", "proj_voice_03"]}})
+    # Always clean up existing workflows for user to enforce clean 4 preset projects baseline
+    workflows_col.delete_many({"user_id": user_id})
+    if vector_col is not None:
+        vector_col.delete_many({"user_id": user_id})
 
     # -------------------------------------------------------------------------
     # 1. Omnichannel Customer Support Mega Voice Agent (20 Nodes Architecture)
@@ -823,11 +827,12 @@ def seed_default_mongo_data(user_id: str):
         {"id": "sn-2", "x": 420, "y": 600, "text": "🎯 AI Interviewer Architecture: 23 Production n8n Nodes covering Pre-interview parsing & ATS, Live VAD/STT interview loop with real-time answer grading, and Post-interview DeepSeek R1 scorecard, PDF report, Slack HR notifications, & ATS sync.", "color": "#D1FAE5"}
     ]
 
-    voice_nodes, voice_conns = generate_tailored_workflow_canvas("Multilingual Technical Support Desk", "Telecom / Enterprise IT", "Voice call intake with Indic STT/TTS, ticket generation, and NVIDIA NIM reasoning.")
+    sales_nodes, sales_conns = generate_tailored_workflow_canvas("Sales Lead Qualification & Booking", "B2B SaaS / Services", "Qualifies budget & timeline, books calendar demos, and updates CRM in MongoDB.")
+    booking_nodes, booking_conns = generate_tailored_workflow_canvas("Patient OPD Appointment Booking", "Healthcare OPD", "Book doctor appointments and send WhatsApp confirmations in Tamil and English.")
 
     initial_workflows = [
         {
-            "id": f"proj_support_01",
+            "id": "proj_support_01",
             "user_id": user_id,
             "name": "Omnichannel Customer Support Mega Voice Agent",
             "vertical": "D2C E-commerce & Retail",
@@ -849,7 +854,51 @@ def seed_default_mongo_data(user_id: str):
             "vector_status": "Indexed in Vector Database (384-dim)"
         },
         {
-            "id": f"proj_interviewer_02",
+            "id": "proj_sales_01",
+            "user_id": user_id,
+            "name": "Sales Lead Qualification & Booking",
+            "vertical": "B2B SaaS / Services",
+            "languages": ["en", "hi"],
+            "description": "Qualifies budget & timeline, books calendar demos, and updates CRM in MongoDB.",
+            "active_workforces": 1,
+            "total_executions": 620,
+            "success_rate": "98.5%",
+            "status": "Active",
+            "nodes": sales_nodes,
+            "connections": sales_conns,
+            "sticky_notes": [],
+            "updated_at": "1 hour ago",
+            "created_at": time.time() - 3600,
+            "total_cost_usd": 0.025,
+            "total_cost_inr": 2.10,
+            "models_used": ["nvidia/llama-3.1-nemotron-70b-instruct"],
+            "vector_id": "vec_proj_sales_01",
+            "vector_status": "Indexed in Vector Database (384-dim)"
+        },
+        {
+            "id": "proj_booking_01",
+            "user_id": user_id,
+            "name": "Patient OPD Appointment Booking",
+            "vertical": "Healthcare OPD",
+            "languages": ["ta", "hi", "en"],
+            "description": "Book doctor appointments and send WhatsApp confirmations in Tamil and English.",
+            "active_workforces": 1,
+            "total_executions": 980,
+            "success_rate": "99.4%",
+            "status": "Active",
+            "nodes": booking_nodes,
+            "connections": booking_conns,
+            "sticky_notes": [],
+            "updated_at": "30 minutes ago",
+            "created_at": time.time() - 1800,
+            "total_cost_usd": 0.031,
+            "total_cost_inr": 2.60,
+            "models_used": ["meta/llama-3.1-70b-instruct"],
+            "vector_id": "vec_proj_booking_01",
+            "vector_status": "Indexed in Vector Database (384-dim)"
+        },
+        {
+            "id": "proj_interviewer_02",
             "user_id": user_id,
             "name": "AI Technical & HR Interviewer Voice Agent",
             "vertical": "HR Tech & Recruitment",
@@ -868,28 +917,6 @@ def seed_default_mongo_data(user_id: str):
             "total_cost_inr": 3.15,
             "models_used": ["mistralai/mistral-large-2-instruct", "deepseek-ai/deepseek-r1"],
             "vector_id": "vec_proj_interviewer_02",
-            "vector_status": "Indexed in Vector Database (384-dim)"
-        },
-        {
-            "id": f"proj_voice_03",
-            "user_id": user_id,
-            "name": "Multilingual Technical Support Desk",
-            "vertical": "Telecom / Enterprise IT",
-            "languages": ["hi", "ta", "te", "en"],
-            "description": "Voice call intake with Indic STT/TTS, ticket generation, and NVIDIA NIM reasoning.",
-            "active_workforces": 2,
-            "total_executions": 2140,
-            "success_rate": "98.9%",
-            "status": "Active",
-            "nodes": voice_nodes,
-            "connections": voice_conns,
-            "sticky_notes": [],
-            "updated_at": "10 minutes ago",
-            "created_at": time.time() - 600,
-            "total_cost_usd": 0.065,
-            "total_cost_inr": 5.45,
-            "models_used": ["nvidia/llama-3.1-nemotron-70b-instruct", "meta/llama-3.2-11b-vision-instruct"],
-            "vector_id": "vec_proj_voice_03",
             "vector_status": "Indexed in Vector Database (384-dim)"
         }
     ]
@@ -914,6 +941,9 @@ def seed_default_mongo_data(user_id: str):
                 "models_used": wf["models_used"],
                 "user_id": user_id
             })
+
+    ensure_user_domain_data(user_id, "Gowtham D")
+    ensure_user_domain_data("cust_gowtham", "Gowtham D")
 
 def init_mongo_db():
     users_col = mongo.get_collection("users")
@@ -1139,6 +1169,7 @@ def generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
 
 def send_email_otp(recipient_email: str, name: str, otp: str) -> bool:
+    print(f"[DEVELOPER OTP LOG] Generated 6-digit OTP for {recipient_email}: {otp}")
     smtp_user = os.getenv("SMTP_USER")
     smtp_pass = os.getenv("SMTP_PASSWORD")
     if not smtp_user or not smtp_pass:
@@ -1161,7 +1192,7 @@ Valid for 10 minutes. Do not share this.
             s.send_message(msg)
         return True
     except Exception as e:
-        print(f"[Email OTP Error] Failed to send email to {recipient_email}: {e}")
+        print(f"[Email OTP Warning] Direct SMTP port 587 unreachable on cloud host: {e}")
         return False
 
 def check_user_exists(email: Optional[str] = None, phone: Optional[str] = None) -> bool:
