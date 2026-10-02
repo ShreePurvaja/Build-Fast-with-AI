@@ -402,7 +402,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       console.error("Google sign-in failed:", err);
       setLoading(false);
-      setMsg({ type: 'error', text: err.message || 'Google authentication failed' });
+      const errStr = err.message || '';
+      if (errStr.includes('auth/unauthorized-domain')) {
+        setMsg({ 
+          type: 'error', 
+          text: 'Firebase Unauthorized Domain error! Please add your current domain in Firebase Console > Authentication > Settings > Authorized Domains.' 
+        });
+      } else if (errStr.includes('popup-blocked')) {
+        setMsg({ 
+          type: 'error', 
+          text: 'Sign-in popup was blocked by your browser. Please allow popups for this site or use Demo Login.' 
+        });
+      } else {
+        setMsg({ type: 'error', text: err.message || 'Google authentication failed' });
+      }
     }
   };
 
