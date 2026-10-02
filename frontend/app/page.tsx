@@ -56,6 +56,13 @@ export default function Home() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
     const cachedUserStr = typeof window !== 'undefined' ? localStorage.getItem('user_info') : null;
     const savedTab = typeof window !== 'undefined' ? (localStorage.getItem('active_tab') as any) : null;
+    const cachedProjStr = typeof window !== 'undefined' ? localStorage.getItem('active_project') : null;
+
+    if (cachedProjStr) {
+      try {
+        setActiveProject(JSON.parse(cachedProjStr));
+      } catch (e) {}
+    }
 
     let restoredUser: UserState | null = null;
     if (cachedUserStr) {
@@ -121,6 +128,7 @@ export default function Home() {
               localStorage.removeItem('access_token');
               localStorage.removeItem('user_info');
               localStorage.removeItem('active_tab');
+              localStorage.removeItem('active_project');
             }
             setUser(null);
             setActiveTab('auth');
@@ -158,6 +166,7 @@ export default function Home() {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_info');
       localStorage.removeItem('active_tab');
+      localStorage.removeItem('active_project');
     }
     setUser(null);
     setActiveProject(null);
@@ -167,17 +176,26 @@ export default function Home() {
 
   const handleOpenCanvas = (proj: any) => {
     setActiveProject(proj);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('active_project', JSON.stringify(proj));
+    }
     changeTab('editor');
   };
 
   const handleOpenWorkflowDashboard = (proj: any) => {
     setActiveProject(proj);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('active_project', JSON.stringify(proj));
+    }
     changeTab('workflow-dashboard');
   };
 
   const handleCreateProject = (newProj: any) => {
     setProjects(prev => [newProj, ...prev]);
     setActiveProject(newProj);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('active_project', JSON.stringify(newProj));
+    }
     changeTab('workflow-dashboard');
   };
 

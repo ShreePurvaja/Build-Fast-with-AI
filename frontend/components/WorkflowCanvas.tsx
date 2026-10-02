@@ -150,8 +150,19 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   onOpenDashboard
 }) => {
   // Workflow Identity & Persistence State
-  const [currentWorkflowId, setCurrentWorkflowId] = useState<string>(activeProject?.id || 'proj_support_01');
-  const [workflowTitle, setWorkflowTitle] = useState(activeProject?.name || 'Customer Support & Refund Pipeline');
+  const getInitialProject = () => {
+    if (activeProject) return activeProject;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('active_project');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+    }
+    return null;
+  };
+  const initProj = getInitialProject();
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string>(initProj?.id || activeProject?.id || 'proj_interviewer_02');
+  const [workflowTitle, setWorkflowTitle] = useState<string>(initProj?.name || activeProject?.name || 'AI Technical Interviewer Agent');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
   

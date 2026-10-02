@@ -42,7 +42,7 @@ def get_base_url(request: Request) -> str:
     """Returns absolute HTTPS origin URL to prevent Twilio relative path 404 bugs."""
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "build-fast-with-ai.onrender.com"
     scheme = request.headers.get("x-forwarded-proto") or "https"
-    if "onrender.com" in host and not scheme.startswith("https"):
+    if not (host.startswith("localhost") or host.startswith("127.0.0.1")):
         scheme = "https"
     return f"{scheme}://{host}".rstrip("/")
 
@@ -112,7 +112,7 @@ async def twilio_voice_incoming(
             wf_id = sess["workforce_id"]
             sess_id = sess["session_id"]
             greeting = get_agent_greeting(wf_id, is_pin_verified=False)
-            action_url = f"{base_url}/api/twilio/voice/turn?wf_id={wf_id}&session_id={sess_id}"
+            action_url = f"{base_url}/api/twilio/voice/turn?wf_id={wf_id}&amp;session_id={sess_id}"
             
             twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
             <Response>
@@ -158,7 +158,7 @@ async def twilio_voice_pin_submit(
     TWILIO_CALL_SESSIONS[CallSid] = sess
     wf_id = sess.get("workforce_id", "proj_interviewer_02")
     session_id = sess.get("session_id", f"twil_{CallSid}")
-    action_url = f"{base_url}/api/twilio/voice/turn?wf_id={wf_id}&session_id={session_id}"
+    action_url = f"{base_url}/api/twilio/voice/turn?wf_id={wf_id}&amp;session_id={session_id}"
 
     # Explicit agent identification greeting
     greeting = get_agent_greeting(wf_id, is_pin_verified=True)
@@ -196,7 +196,7 @@ async def twilio_voice_turn(
         "session_id": effective_sess_id
     }
 
-    action_url = f"{base_url}/api/twilio/voice/turn?wf_id={effective_wf}&session_id={effective_sess_id}"
+    action_url = f"{base_url}/api/twilio/voice/turn?wf_id={effective_wf}&amp;session_id={effective_sess_id}"
 
     if not SpeechResult.strip():
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>

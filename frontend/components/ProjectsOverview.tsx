@@ -408,44 +408,6 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
         </div>
       </div>
 
-      {/* Live Twilio Phone Call Test Card Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <span className="badge-emerald text-xs font-bold">📞 Live Twilio Voice Agent Test</span>
-            <h4 className="font-bold text-slate-900 text-sm mt-0.5">Test Live Voice Agent via Phone Call</h4>
-            <p className="text-xs text-slate-600">Dial our dedicated Twilio number from your phone to test any active workflow live.</p>
-          </div>
-
-          <div className="bg-white px-3.5 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-4">
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
-              <div className="text-xs font-extrabold text-slate-900 font-mono">+1 (737) 250-8034</div>
-            </div>
-            <div className="border-l border-slate-200 pl-3">
-              <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>
-              <div className="text-sm font-black text-amber-900 font-mono">4821</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 bg-white/90 p-2 rounded-xl border border-slate-200 text-xs">
-          <span className="font-semibold text-slate-700">📱 Auto-Connect Caller ID:</span>
-          <input
-            type="text"
-            placeholder="Enter your mobile number (+91 98765 43210)..."
-            defaultValue="+91 98765 43210"
-            className="flex-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs focus:outline-none focus:border-[#0e6b6b]"
-          />
-          <button
-            onClick={() => alert('Caller ID +91 98765 43210 bound to Gowtham D test session! When you dial +1 (737) 250-8034 from this phone, it auto-connects to your workflow instantly.')}
-            className="bg-[#0e6b6b] text-white text-[11px] px-3 py-1 rounded-lg font-bold hover:bg-teal-800 transition-colors"
-          >
-            Bind Caller ID
-          </button>
-        </div>
-      </div>
-
       {/* 2. STAT METRIC CARDS ROW (5 Stat Cards in 1 Row) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 bg-white p-4 rounded-2xl border border-[#E6E1D7] shadow-2xs">
         <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7]/70">
