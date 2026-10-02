@@ -52,7 +52,7 @@ class SimulateTurnRequest(BaseModel):
     workforce_id: str
     session_id: str
     user_input: str
-    language: str = "ta"
+    language: str = "en"
     customer_id: Optional[str] = "cust_gowtham"
     customer_name: Optional[str] = "Gowtham D"
     image_url: Optional[str] = None
