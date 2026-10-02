@@ -236,6 +236,23 @@ def simulate_session_turn(req: SimulateTurnRequest):
 
     # WORKFLOW 4: Recruitment Screening & AI Technical Interviewer (wf_hr / proj_interviewer_02)
     if is_interviewer or any(k in text_lower for k in ["interview", "candidate", "resume", "screening"]):
+        # Explicit guard against order questions while on an interview call
+        if any(k in text_lower for k in ["saree", "earbud", "shirt", "order status", "delivery date", "tracking number"]):
+            boundary_text = "I am your AI Technical Interviewer for your engineering role. I do not handle customer product orders. Let's return to your technical interview."
+            return {
+                "turn_index": 2,
+                "speaker": "Resume Screener Worker",
+                "worker_id": "screener",
+                "text": format_voice_response(boundary_text, lang=lang),
+                "audio_filler": None,
+                "tool_used": "ats",
+                "action_taken": "enforce_interview_boundary",
+                "idempotency_key": idempotency_key,
+                "approval_required": False,
+                "escalated": False,
+                "latency_ms": 50
+            }
+
         cand = CANDIDATES_DB.get(customer_id, {})
         hr_context = (
             f"Candidate Name: {customer_name}.\n"
@@ -247,7 +264,8 @@ def simulate_session_turn(req: SimulateTurnRequest):
         )
 
         system_prompt = (
-            f"You are a Senior AI Technical Interviewer conducting a live interactive interview for {customer_name} applying for {cand.get('role', 'Senior Full Stack Engineer')}.\n"
+            f"You are a Senior AI Technical Interviewer conducting a live interactive interview for candidate {customer_name} applying for {cand.get('role', 'Senior Full Stack Engineer')}.\n"
+            f"CRITICAL BOUNDARY RULE: You are an AI Technical Interviewer ONLY. Do NOT mention customer orders, sarees, earbuds, shipping, or e-commerce products under any circumstances.\n"
             f"RULES:\n"
             f"1. Evaluate the candidate's spoken response in 1 short sentence.\n"
             f"2. IMMEDIATELY ask the next technical interview question (e.g. on FastAPI concurrency, database indexing, or async event loops).\n"
