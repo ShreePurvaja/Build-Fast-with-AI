@@ -3085,7 +3085,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded border border-emerald-500/30">Live Inbound</span>
                   </div>
                   <p className="text-[11px] text-slate-300 mt-0.5">
-                    Call <b className="text-white text-xs font-mono">+1 (800) 555-0199</b> & enter your 4-digit PIN on keypad
+                    Call <b className="text-white text-xs font-mono">+1 (737) 250-8034</b> & enter your 4-digit PIN on keypad
                   </p>
                 </div>
               </div>

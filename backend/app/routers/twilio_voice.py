@@ -9,9 +9,11 @@ from app.routers.runtime import simulate_session_turn
 from app.models.schemas import SimulateTurnRequest
 from app.engine.voice_formatter import format_voice_response
 
+import os
+
 router = APIRouter(prefix="/api/twilio", tags=["Twilio Voice Agent Router"])
 
-TWILIO_PHONE_NUMBER = "+1 (800) 555-0199"
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "+1 (737) 250-8034")
 
 # In-Memory PIN & Caller ID Registries
 PIN_REGISTRY: Dict[str, Dict[str, Any]] = {}

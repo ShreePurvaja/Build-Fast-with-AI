@@ -353,7 +353,7 @@ export const Step4Simulation: React.FC<Step4SimulationProps> = ({ spec, onNext, 
               <div className="bg-white px-3 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-3">
                 <div className="text-right">
                   <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
-                  <div className="text-xs font-bold text-slate-900 font-mono">+1 (800) 555-0199</div>
+                  <div className="text-xs font-bold text-slate-900 font-mono">+1 (737) 250-8034</div>
                 </div>
                 <div className="border-l border-slate-200 pl-3">
                   <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>

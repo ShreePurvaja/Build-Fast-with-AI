@@ -167,7 +167,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           <div className="bg-white px-3.5 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-4">
             <div>
               <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
-              <div className="text-xs font-extrabold text-slate-900 font-mono">+1 (800) 555-0199</div>
+              <div className="text-xs font-extrabold text-slate-900 font-mono">+1 (737) 250-8034</div>
             </div>
             <div className="border-l border-slate-200 pl-3">
               <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>
@@ -185,7 +185,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             className="flex-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs focus:outline-none focus:border-[#0e6b6b]"
           />
           <button
-            onClick={() => alert('Caller ID +91 98765 43210 bound to Gowtham D test session! When you dial +1 (800) 555-0199 from this phone, it auto-connects to your workflow instantly.')}
+            onClick={() => alert('Caller ID +91 98765 43210 bound to Gowtham D test session! When you dial +1 (737) 250-8034 from this phone, it auto-connects to your workflow instantly.')}
             className="bg-[#0e6b6b] text-white text-[11px] px-3 py-1 rounded-lg font-bold hover:bg-teal-800 transition-colors"
           >
             Bind Caller ID
