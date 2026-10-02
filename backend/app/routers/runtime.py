@@ -76,8 +76,8 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
             {"role": "system", "content": "You are a professional customer service voice AI assistant answering turn queries mid-call."},
             {"role": "user", "content": full_prompt}
         ],
-        "max_tokens": 120,
-        "temperature": 0.2
+        "max_tokens": 75,
+        "temperature": 0.1
     }).encode("utf-8")
 
     headers = {
@@ -88,7 +88,7 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
 
     try:
         r = urllib.request.Request("https://integrate.api.nvidia.com/v1/chat/completions", data=payload, headers=headers)
-        with urllib.request.urlopen(r, timeout=10) as resp:
+        with urllib.request.urlopen(r, timeout=4) as resp:
             data = json.loads(resp.read().decode())
             ans = data["choices"][0]["message"]["content"].strip()
             if ans:

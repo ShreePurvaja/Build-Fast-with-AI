@@ -165,13 +165,17 @@ async def twilio_voice_turn(
     )
     
     bot_res = simulate_session_turn(turn_req)
-    spoken_text = format_voice_response(bot_res["text"])
+    spoken_text = format_voice_response(bot_res.get("text", ""))
+    audio_filler = bot_res.get("audio_filler", "").strip()
+
+    filler_xml = f'<Say voice="Polly.Aditi">{audio_filler}</Say>' if audio_filler else ""
 
     # Build continuous speech TwiML response with absolute action URL
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
     <Response>
+        {filler_xml}
         <Say voice="Polly.Aditi">{spoken_text}</Say>
-        <Gather input="speech" action="{base_url}/api/twilio/voice/turn" method="POST" timeout="6" speechTimeout="auto">
+        <Gather input="speech" action="{base_url}/api/twilio/voice/turn" method="POST" timeout="5" speechTimeout="auto">
         </Gather>
         <Say voice="Polly.Aditi">Thank you for calling. Goodbye.</Say>
     </Response>"""
