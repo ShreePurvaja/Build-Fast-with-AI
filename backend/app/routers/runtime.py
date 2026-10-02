@@ -5,6 +5,7 @@ import uuid
 import random
 import urllib.request
 from typing import Optional, Dict, Any
+from pydantic import BaseModel
 from fastapi import APIRouter
 from app.models.schemas import SimulateTurnRequest, EscalationItem
 from app.data.database import (
@@ -102,16 +103,56 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
 
     return None
 
+class ResumeUploadRequest(BaseModel):
+    customer_id: Optional[str] = "cust_gowtham"
+    file_name: str
+    candidate_name: str
+    resume_text: Optional[str] = ""
+
+@router.post("/resume/upload")
+def upload_candidate_resume(req: ResumeUploadRequest):
+    """Parses and registers uploaded resume details for personalized technical interview questions."""
+    cid = req.customer_id or "cust_gowtham"
+    cand_name = req.candidate_name or "Candidate"
+    
+    text_sample = req.resume_text or ""
+    detected_skills = []
+    for skill in ["Python", "FastAPI", "React", "MongoDB", "Node.js", "PyTorch", "Docker", "Kubernetes", "AWS", "TypeScript", "Java", "C++"]:
+        if skill.lower() in text_sample.lower():
+            detected_skills.append(skill)
+    if not detected_skills:
+        detected_skills = ["Python", "FastAPI", "React", "MongoDB"]
+
+    CANDIDATES_DB[cid] = {
+        "candidate_id": f"CAND-{random.randint(100, 999)}",
+        "name": cand_name,
+        "role": f"Custom Role ({req.file_name})",
+        "tech_stack": ", ".join(detected_skills),
+        "resume_file": req.file_name,
+        "resume_text": text_sample[:500],
+        "screening_score": 95,
+        "status": "custom_resume_uploaded"
+    }
+
+    return {
+        "status": "success",
+        "message": f"Resume '{req.file_name}' uploaded successfully for candidate {cand_name}.",
+        "candidate_info": CANDIDATES_DB[cid]
+    }
+
 def check_guardrail_violation(text_input: str, wf_id: str) -> Optional[str]:
-    text_lower = text_input.lower()
+    text_lower = text_input.lower().strip()
+    is_interviewer = wf_id in ["proj_interviewer_02", "wf_hr"]
     
     # 1. Jailbreak & Prompt Injection Defense
     jailbreak_terms = [
         "ignore previous instructions", "system prompt", "reveal prompt",
         "bypass rules", "jailbreak", "override safety", "act as dan",
-        "forget instructions", "reveal system keys"
+        "forget instructions", "reveal system keys", "disregard instructions"
     ]
     if any(t in text_lower for t in jailbreak_terms):
+        if is_interviewer:
+            return "I am your AI Technical Interviewer operating under strict evaluation rules. I cannot process prompt override requests. Let's continue with your technical interview."
         return "I am an AI voice agent operating under strict topic guardrails. I cannot process prompt override requests. How can I help you with your workflow today?"
 
     # 2. Harmful / Malicious Content Defense
@@ -119,12 +160,25 @@ def check_guardrail_violation(text_input: str, wf_id: str) -> Optional[str]:
     if any(t in text_lower for t in harm_terms):
         return "I am unable to assist with illegal or harmful requests. Please ask a question related to your active workflow."
 
-    # 3. Off-Topic Knowledge Boundary Guardrail
+    # 3. STRICT Math & Arithmetic Problem Guardrail (Prevents "2+2", "what is 5*5", etc.)
+    has_math_ops = re.search(r'\b\d+\s*[\+\-\*\/\^]\s*\d+\b', text_lower)
+    math_words = ["2+2", "2 + 2", "plus", "minus", "multiplied by", "divided by", "square root", "what is 2", "what is 1+", "what is 3+"]
+    has_math_word = any(w in text_lower for w in math_words) and any(digit in text_lower for digit in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+
+    if has_math_ops or has_math_word:
+        if is_interviewer:
+            return "I am your AI Technical Interviewer for your engineering role. I do not solve general math equations like 2+2. Let's focus on your technical engineering interview."
+        return "I am an AI voice agent operating under strict workflow guardrails. I do not solve general math problems or arithmetic equations. How can I help with your active workflow today?"
+
+    # 4. Off-Topic Knowledge & General Trivia Guardrail
     off_topic_terms = [
-        "recipe for cake", "who won cricket", "tell a joke", "write a poem", 
-        "capital of france", "movie review", "weather forecast"
+        "recipe for", "who won", "tell a joke", "write a poem", 
+        "capital of", "movie review", "weather forecast", "who is the president",
+        "tell me a story", "what is the meaning of life", "who created you"
     ]
     if any(t in text_lower for t in off_topic_terms):
+        if is_interviewer:
+            return "I am authorized to conduct your technical engineering interview only. I cannot answer general trivia or off-topic questions. Let's return to your technical question."
         return "I am authorized to assist only with your active workflow (orders, doctor appointments, sales, or technical interviews). Please ask a relevant workflow question."
 
     return None
@@ -254,24 +308,46 @@ def simulate_session_turn(req: SimulateTurnRequest):
             }
 
         cand = CANDIDATES_DB.get(customer_id, {})
-        hr_context = (
-            f"Candidate Name: {customer_name}.\n"
-            f"Candidate ID: {cand.get('candidate_id', 'CAND-901')}.\n"
-            f"Applied Role: {cand.get('role', 'Senior Full Stack Engineer')}.\n"
-            f"Tech Stack: {cand.get('tech_stack', 'Python, React, FastAPI, MongoDB')}.\n"
-            f"ATS Screening Score: {cand.get('screening_score', 92)}%.\n"
-            f"Status: {cand.get('status', 'tech_screen_passed')}."
-        )
+        has_custom_resume = cand.get("status") == "custom_resume_uploaded"
 
-        system_prompt = (
-            f"You are a Senior AI Technical Interviewer conducting a live interactive interview for candidate {customer_name} applying for {cand.get('role', 'Senior Full Stack Engineer')}.\n"
-            f"CRITICAL BOUNDARY RULE: You are an AI Technical Interviewer ONLY. Do NOT mention customer orders, sarees, earbuds, shipping, or e-commerce products under any circumstances.\n"
-            f"RULES:\n"
-            f"1. Evaluate the candidate's spoken response in 1 short sentence.\n"
-            f"2. IMMEDIATELY ask the next technical interview question (e.g. on FastAPI concurrency, database indexing, or async event loops).\n"
-            f"3. Do NOT ask 'Are you ready for the question?'. Ask the technical question directly so the candidate can answer!\n"
-            f"4. Maximum 2 short sentences total."
-        )
+        if has_custom_resume:
+            hr_context = (
+                f"Candidate Name: {cand.get('name', customer_name)}.\n"
+                f"Uploaded Resume Document: {cand.get('resume_file', 'Resume.pdf')}.\n"
+                f"Extracted Domain/Skills: {cand.get('tech_stack', 'Professional Experience')}.\n"
+                f"FULL RESUME TEXT CONTENT:\n{cand.get('resume_text', 'General Background')}\n"
+                f"Mode: Universal Resume Interviewer (Technical or Non-Technical Domain)."
+            )
+
+            system_prompt = (
+                f"You are an expert AI Professional Interviewer conducting a live interactive audio interview for candidate {cand.get('name', customer_name)} based on their uploaded resume.\n"
+                f"UNIVERSAL RESUME RULES:\n"
+                f"1. Analyze the candidate's uploaded resume content carefully. Identify whether the domain is Technical (Software/DevOps/AI) OR Non-Technical (Sales/Marketing/HR/Finance/Design/Operations/Management).\n"
+                f"2. Frame a structured 5-question interview tailored specifically to the role, tools, achievements, and past experience in their resume.\n"
+                f"3. Evaluate the candidate's spoken response briefly in 1 short sentence.\n"
+                f"4. IMMEDIATELY ask the next question framed from their resume domain.\n"
+                f"5. CRITICAL BOUNDARY RULE: You are an AI Job Interviewer ONLY. Do NOT mention customer orders, sarees, earbuds, shipping, or e-commerce products under any circumstances.\n"
+                f"6. Maximum 2 short sentences total. Ready for live Text-to-Speech audio playback."
+            )
+        else:
+            hr_context = (
+                f"Candidate Name: {customer_name}.\n"
+                f"Candidate ID: {cand.get('candidate_id', 'CAND-901')}.\n"
+                f"Applied Role: {cand.get('role', 'Senior Full Stack Engineer')}.\n"
+                f"Tech Stack: {cand.get('tech_stack', 'Python, React, FastAPI, MongoDB')}.\n"
+                f"ATS Screening Score: {cand.get('screening_score', 92)}%.\n"
+                f"Mode: Baseline Full-Stack Developer Interview."
+            )
+
+            system_prompt = (
+                f"You are a Senior AI Technical Interviewer conducting a live interactive interview for candidate {customer_name} applying for Senior Full Stack Engineer.\n"
+                f"CRITICAL BOUNDARY RULE: You are an AI Technical Interviewer ONLY. Do NOT mention customer orders, sarees, earbuds, shipping, or e-commerce products under any circumstances.\n"
+                f"RULES:\n"
+                f"1. Evaluate the candidate's spoken response in 1 short sentence.\n"
+                f"2. IMMEDIATELY ask the next technical interview question (e.g. on FastAPI concurrency, GIL, database indexing, or async event loops).\n"
+                f"3. Do NOT ask 'Are you ready for the question?'. Ask the technical question directly so the candidate can answer!\n"
+                f"4. Maximum 2 short sentences total."
+            )
 
         llm_response = query_real_nvidia_llm(
             user_input=text_input,
@@ -282,9 +358,15 @@ def simulate_session_turn(req: SimulateTurnRequest):
 
         if not llm_response:
             if "yes" in text_lower or "ready" in text_lower or "start" in text_lower:
-                llm_response = "Great! Let's start with Question 1: In FastAPI, how do async route handlers manage database concurrency without blocking the event loop?"
+                if has_custom_resume:
+                    llm_response = f"Great! Based on your uploaded resume ({cand.get('resume_file')}), let me start with Question 1: Can you walk me through your main responsibilities and biggest achievement in your past role?"
+                else:
+                    llm_response = "Great! Let's start with Question 1: In FastAPI, how do async route handlers manage database concurrency without blocking the event loop?"
             else:
-                llm_response = "Good explanation! Question 2: How do you handle database rollbacks and connection pooling under high availability?"
+                if has_custom_resume:
+                    llm_response = f"Good explanation! Question 2 based on your resume: How do you handle project challenges and prioritize key deliverables under tight deadlines?"
+                else:
+                    llm_response = "Good explanation! Question 2: How do you handle database rollbacks and connection pooling under high availability?"
 
         return {
             "turn_index": 2,

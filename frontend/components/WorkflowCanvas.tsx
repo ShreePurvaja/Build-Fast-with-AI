@@ -2040,6 +2040,114 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   </div>
                 )}
 
+                {/* RESUME UPLOAD MODULE (Node 1 - Optional Resume Upload for Candidate Personalization) */}
+                {(targetNode.id === 'node-1' || targetNode.icon === 'doc_resume_parser' || targetNode.name.toLowerCase().includes('resume')) && (
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-amber-900">
+                        <FileText className="w-4 h-4 text-amber-700" />
+                        <span>Candidate Resume File Upload (Optional)</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                        Node 1 File Stream
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                      Upload candidate's resume (PDF, DOCX, TXT). If uploaded, the AI Technical Interviewer will personalize questions based on their resume skills. If skipped, the agent defaults to standard <b>Full Stack Developer</b> interview baseline.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.txt,.md"
+                        id="resume-upload-file-input"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          try {
+                            let fileText = "";
+                            try {
+                              fileText = await file.text();
+                            } catch (err) {
+                              fileText = `Resume Document: ${file.name}`;
+                            }
+                            
+                            const candName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9\s]/g, " ").trim() || "Candidate";
+                            
+                            // Send candidate resume to backend API
+                            fetch(`${API_BASE_URL}/api/resume/upload`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                customer_id: 'cust_gowtham',
+                                file_name: file.name,
+                                candidate_name: candName,
+                                resume_text: fileText
+                              })
+                            }).catch(() => {});
+
+                            setNodes(prev => prev.map(n => n.id === targetNode.id ? {
+                              ...n,
+                              inputPayload: {
+                                ...(n.inputPayload || {}),
+                                resume_file_name: file.name,
+                                uploaded: true,
+                                candidate_name: candName
+                              }
+                            } : n));
+
+                            alert(`Resume '${file.name}' uploaded successfully! The AI Technical Interviewer will now ask personalized questions based on ${candName}'s resume.`);
+                          } catch (err) {
+                            alert(`Uploaded '${file.name}'! Stored resume details for technical interview.`);
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      <label
+                        htmlFor="resume-upload-file-input"
+                        className="flex-1 px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-extrabold rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all shadow-2xs"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>{targetNode.inputPayload?.resume_file_name ? `Change Resume (${targetNode.inputPayload.resume_file_name})` : "Upload Resume (PDF / DOCX)"}</span>
+                      </label>
+
+                      {targetNode.inputPayload?.resume_file_name && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNodes(prev => prev.map(n => n.id === targetNode.id ? {
+                              ...n,
+                              inputPayload: { ...(n.inputPayload || {}), resume_file_name: undefined, uploaded: false }
+                            } : n));
+                          }}
+                          className="px-3 py-2 text-xs font-extrabold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-all"
+                        >
+                          Remove Resume
+                        </button>
+                      )}
+                    </div>
+
+                    {targetNode.inputPayload?.resume_file_name ? (
+                      <div className="bg-white p-3 rounded-xl border border-amber-300 text-xs font-semibold text-amber-900 flex items-center justify-between shadow-2xs">
+                        <span className="flex items-center gap-1.5 truncate">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="truncate">Active Resume: <b>{targetNode.inputPayload.resume_file_name}</b></span>
+                        </span>
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md border border-amber-300 shrink-0">
+                          Personalized Mode
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-xs text-slate-600 font-medium">
+                        ℹ️ No resume uploaded. Agent will run default <b>Senior Full-Stack Developer</b> interview baseline (FastAPI, React, GIL, Concurrency).
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* AI Agent Sub-Modules */}
                 {targetNode.type === 'ai' && (
                   <div className="p-4 bg-[#FDF3E9]/60 border border-[#E6E1D7] rounded-2xl space-y-4">

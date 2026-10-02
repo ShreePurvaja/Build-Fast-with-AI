@@ -24,7 +24,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Depends, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.data.database import ensure_user_domain_data
+from app.data.database import CANDIDATES_DB, ensure_user_domain_data
 
 
 # -----------------------------------------------------------------------------
@@ -2703,15 +2703,34 @@ def execute_single_node_live(req: NodeExecuteRequest):
     # -------------------------------------------------------------------------
     # 2. Trigger Node Execution (Voice VAD, Indic STT, Webhook, Form Intake)
     # -------------------------------------------------------------------------
-    elif node_type_lower == "trigger" or any(k in node_name_lower for k in ["voice", "stt", "trigger", "vad", "webrtc", "intake"]):
-        transcript = input_data.get("transcript") or req.prompt or "வணக்கம், order #4821 saree arrived damaged."
-        lang = input_data.get("language") or "ta-IN"
-        caller = input_data.get("caller") or "+91 9876543210"
-        
-        if "vad" in node_name_lower or "input" in node_name_lower:
+    elif node_type_lower == "trigger" or any(k in node_name_lower for k in ["voice", "stt", "trigger", "vad", "webrtc", "intake", "resume", "pdf"]):
+        cand = CANDIDATES_DB.get("cust_gowtham", {})
+        has_custom = cand.get("status") == "custom_resume_uploaded"
+
+        if "resume" in node_name_lower or "pdf" in node_name_lower or "screener" in node_name_lower or "parser" in node_name_lower:
+            if has_custom:
+                output = {
+                    "candidate_name": cand.get("name", "Custom Candidate"),
+                    "resume_file": cand.get("resume_file", "Resume.pdf"),
+                    "extracted_skills": cand.get("tech_stack", "Custom Skills"),
+                    "resume_text_sample": cand.get("resume_text", "")[:250],
+                    "mode": "Personalized Uploaded Resume Mode",
+                    "status": "CUSTOM_RESUME_PARSED_SUCCESSFULLY",
+                    "timestamp": time.strftime("%H:%M:%S")
+                }
+            else:
+                output = {
+                    "candidate_name": "Full-Stack Candidate",
+                    "role": "Senior Full Stack Engineer",
+                    "extracted_skills": ["Python", "FastAPI", "React", "MongoDB"],
+                    "mode": "Standard Full-Stack Baseline",
+                    "status": "BASELINE_RESUME_PARSED",
+                    "timestamp": time.strftime("%H:%M:%S")
+                }
+        elif "vad" in node_name_lower or "input" in node_name_lower:
             output = {
                 "audio_stream": "ACTIVE_STREAMING_16KHZ",
-                "caller_id": caller,
+                "caller_id": input_data.get("caller") or "+91 9876543210",
                 "channel": "WebRTC Voice Intake",
                 "vad_active": True,
                 "vad_silence_ms": 200,
@@ -2720,12 +2739,14 @@ def execute_single_node_live(req: NodeExecuteRequest):
                 "timestamp": time.strftime("%H:%M:%S")
             }
         else:
+            transcript = input_data.get("transcript") or req.prompt or "Yes I am ready for the interview."
+            lang = input_data.get("language") or "en-US"
             output = {
                 "transcript": transcript,
                 "language_detected": lang,
                 "stt_engine": "Sarvam AI Indic Whisper / Conformer",
                 "stt_confidence": 0.982,
-                "speaker_diarization": "Speaker_1 (Customer)",
+                "speaker_diarization": "Speaker_1 (Candidate)",
                 "audio_duration_sec": 4.2,
                 "status": "TRANSCRIBED_SUCCESSFULLY",
                 "timestamp": time.strftime("%H:%M:%S")
@@ -3006,13 +3027,16 @@ async def transcribe_audio_sarvam(
 # -----------------------------------------------------------------------------
 # MULTI-AGENT RUNTIME SIMULATOR (WITH LIVE NVIDIA FALLBACK)
 # -----------------------------------------------------------------------------
-class TurnRequest(BaseModel):
-    user_input: str
-    workforce_id: Optional[str] = "proj_support_01"
-    language: Optional[str] = "ta"
-    confirm_action: Optional[bool] = False
-    image_url: Optional[str] = None
-    session_id: Optional[str] = None
+class ResumeUploadRequest(BaseModel):
+    customer_id: Optional[str] = "cust_gowtham"
+    file_name: str
+    candidate_name: str
+    resume_text: Optional[str] = ""
+
+@app.post("/api/resume/upload")
+@app.post("/api/simulate/resume/upload")
+def upload_candidate_resume_endpoint(req: ResumeUploadRequest):
+    return runtime.upload_candidate_resume(req)
 
 @app.post("/api/simulate/turn")
 def simulate_turn(req: SimulateTurnRequest):
