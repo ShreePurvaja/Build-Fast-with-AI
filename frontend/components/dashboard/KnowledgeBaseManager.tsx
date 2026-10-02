@@ -41,10 +41,12 @@ export const KnowledgeBaseManager: React.FC = () => {
   const [newDocText, setNewDocText] = useState('');
   const [isAddingDoc, setIsAddingDoc] = useState(false);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   // Fetch all items from MongoDB Atlas Vector Store
   const fetchVectorStore = () => {
     setIsLoading(true);
-    fetch('http://localhost:8000/api/vector/store')
+    fetch(`${API_BASE_URL}/api/vector/store`)
       .then(res => res.json())
       .then(data => {
         setIsLoading(false);
@@ -71,7 +73,7 @@ export const KnowledgeBaseManager: React.FC = () => {
     }
 
     setIsSearching(true);
-    fetch('http://localhost:8000/api/vector/search', {
+    fetch(`${API_BASE_URL}/api/vector/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: searchQuery, limit: 8 })
@@ -100,7 +102,7 @@ export const KnowledgeBaseManager: React.FC = () => {
     if (!newDocName.trim()) return;
 
     setIsAddingDoc(true);
-    fetch('http://localhost:8000/api/workflows', {
+    fetch(`${API_BASE_URL}/api/workflows`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

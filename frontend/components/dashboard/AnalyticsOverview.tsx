@@ -51,9 +51,11 @@ export const AnalyticsOverview: React.FC = () => {
   const [modelSearch, setModelSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   const fetchRealTelemetry = () => {
     setIsRefreshing(true);
-    fetch('http://localhost:8000/api/nvidia/telemetry')
+    fetch(`${API_BASE_URL}/api/nvidia/telemetry`)
       .then(res => res.json())
       .then(data => {
         setTelemetry(data);
@@ -79,7 +81,7 @@ export const AnalyticsOverview: React.FC = () => {
     setIsTestingModel(true);
     setLiveTestResponse(null);
     try {
-      const res = await fetch('http://localhost:8000/api/nvidia/infer', {
+      const res = await fetch(`${API_BASE_URL}/api/nvidia/infer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

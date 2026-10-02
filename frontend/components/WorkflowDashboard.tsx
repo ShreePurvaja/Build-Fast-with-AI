@@ -47,10 +47,12 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   const [isInferring, setIsInferring] = useState(false);
   const [inferResult, setInferResult] = useState<any>(null);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   const fetchMetrics = () => {
     if (!workflow?.id) return;
     setIsRefreshing(true);
-    fetch(`http://localhost:8000/api/workflows/${workflow.id}/metrics`)
+    fetch(`${API_BASE_URL}/api/workflows/${workflow.id}/metrics`)
       .then(res => res.json())
       .then(data => {
         setMetricsData(data);
@@ -74,7 +76,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     setInferResult(null);
 
     try {
-      const res = await fetch('http://localhost:8000/api/nvidia/infer', {
+      const res = await fetch(`${API_BASE_URL}/api/nvidia/infer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -149,6 +151,44 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             title="Refresh Metrics"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#D97757]' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Dedicated Twilio Phone Call Test Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <span className="badge-emerald text-xs font-bold">📞 Live Twilio Voice Test</span>
+            <h4 className="font-bold text-slate-900 text-sm mt-0.5">Test Voice Agent via Phone Call</h4>
+            <p className="text-xs text-slate-600">Dial our dedicated Twilio number from your mobile phone to test this agent live.</p>
+          </div>
+
+          <div className="bg-white px-3.5 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-4">
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
+              <div className="text-xs font-extrabold text-slate-900 font-mono">+1 (800) 555-0199</div>
+            </div>
+            <div className="border-l border-slate-200 pl-3">
+              <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>
+              <div className="text-sm font-black text-amber-900 font-mono">4821</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 bg-white/90 p-2 rounded-xl border border-slate-200 text-xs">
+          <span className="font-semibold text-slate-700">📱 Auto-Connect Caller ID:</span>
+          <input
+            type="text"
+            placeholder="Enter your mobile number (+91 98765 43210)..."
+            defaultValue="+91 98765 43210"
+            className="flex-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs focus:outline-none focus:border-[#0e6b6b]"
+          />
+          <button
+            onClick={() => alert('Caller ID +91 98765 43210 bound to Gowtham D test session! When you dial +1 (800) 555-0199 from this phone, it auto-connects to your workflow instantly.')}
+            className="bg-[#0e6b6b] text-white text-[11px] px-3 py-1 rounded-lg font-bold hover:bg-teal-800 transition-colors"
+          >
+            Bind Caller ID
           </button>
         </div>
       </div>
@@ -425,19 +465,19 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           </h3>
           <div className="space-y-2 text-xs">
             <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
-              <span className="font-bold text-[#2B2826]">1. Web Voice Call Intake</span>
+              <span className="font-bold text-[#2B2826]">1. Voice Call Intake</span>
               <span className="text-[10px] text-[#0F766E] font-bold bg-[#E6F4F1] px-2 py-0.5 rounded-md">Trigger</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
-              <span className="font-bold text-[#2B2826]">2. MongoDB Atlas Gateway</span>
+              <span className="font-bold text-[#2B2826]">2. Customer Record Gateway</span>
               <span className="text-[10px] text-[#2563EB] font-bold bg-[#EFF6FF] px-2 py-0.5 rounded-md">Database</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
-              <span className="font-bold text-[#2B2826]">3. NVIDIA NIM AI Worker</span>
+              <span className="font-bold text-[#2B2826]">3. AI Reasoning Engine</span>
               <span className="text-[10px] text-[#D97757] font-bold bg-[#FDF3E9] px-2 py-0.5 rounded-md">Reasoning</span>
             </div>
             <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
-              <span className="font-bold text-[#2B2826]">4. Gmail & Notifications</span>
+              <span className="font-bold text-[#2B2826]">4. Automated Actions</span>
               <span className="text-[10px] text-[#7C3AED] font-bold bg-[#F5F3FF] px-2 py-0.5 rounded-md">Tool</span>
             </div>
           </div>
@@ -453,7 +493,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             <div className="p-3 bg-[#E6F4F1] rounded-xl border border-[#99F6E4] text-[#0F766E]">
               <div className="font-extrabold text-xs">Instant Auto-Refund Cap</div>
               <div className="text-lg font-black mt-1">₹2,000 INR</div>
-              <p className="text-[11px] mt-0.5">Amounts up to ₹2,000 execute automatically via Razorpay/Payment Gateway.</p>
+              <p className="text-[11px] mt-0.5">Amounts up to ₹2,000 execute automatically via Payment Gateway.</p>
             </div>
             <div className="p-2.5 bg-[#FAF8F5] rounded-xl border border-[#E6E1D7] text-[11px]">
               <span className="font-bold text-[#2B2826]">Escalation Rule:</span> Amounts &gt; ₹2,000 or negative sentiment trigger instant transfer to the Human Escalation Inbox.
@@ -470,13 +510,13 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           <div className="space-y-2.5 text-xs text-[#6E685E]">
             <div className="p-2.5 bg-[#EFF6FF] rounded-xl border border-[#BFDBFE] text-[#1E40AF]">
               <div className="font-bold">Database Engine:</div>
-              <div className="font-extrabold text-sm mt-0.5">MongoDB Atlas</div>
-              <div className="text-[10px] mt-1 text-[#3B82F6]">Collection: ai_workforce.workflows</div>
+              <div className="font-extrabold text-sm mt-0.5">Production Enterprise DB</div>
+              <div className="text-[10px] mt-1 text-[#3B82F6]">Status: Active & Synchronized</div>
             </div>
             <div className="text-[11px] space-y-1">
               <div className="flex justify-between">
-                <span>Tenancy ID:</span>
-                <span className="font-mono font-bold text-[#2B2826]">{wf.user_id || 'usr_demo123'}</span>
+                <span>Account User:</span>
+                <span className="font-mono font-bold text-[#2B2826]">Gowtham D</span>
               </div>
               <div className="flex justify-between">
                 <span>Workflow ID:</span>

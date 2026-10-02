@@ -66,15 +66,24 @@ possible_service_paths = [
 ]
 service_account_path = next((p for p in possible_service_paths if os.path.exists(p)), None)
 
+firebase_json_env = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+
 if not firebase_admin._apps:
-    if service_account_path:
+    if firebase_json_env:
+        try:
+            cred_dict = json.loads(firebase_json_env)
+            firebase_admin.initialize_app(credentials.Certificate(cred_dict))
+            print("[Firebase Admin] Initialized successfully from FIREBASE_SERVICE_ACCOUNT_JSON environment variable.")
+        except Exception as e:
+            print(f"[Firebase Admin Env Error] Could not parse FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
+    elif service_account_path:
         try:
             firebase_admin.initialize_app(credentials.Certificate(service_account_path))
             print(f"[Firebase Admin] Initialized with {service_account_path}")
         except Exception as e:
             print(f"[Firebase Admin Error] {e}")
     else:
-        print("[Firebase Admin Warning] serviceAccountKey.json not found in backend or root directory.")
+        print("[Firebase Admin Warning] Neither FIREBASE_SERVICE_ACCOUNT_JSON env var nor serviceAccountKey.json found.")
 
 from firebase_admin import firestore
 

@@ -53,6 +53,8 @@ class SimulateTurnRequest(BaseModel):
     session_id: str
     user_input: str
     language: str = "ta"
+    customer_id: Optional[str] = "cust_gowtham"
+    customer_name: Optional[str] = "Gowtham D"
     image_url: Optional[str] = None
     confirm_action: bool = False
 

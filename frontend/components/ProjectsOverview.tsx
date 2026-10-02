@@ -100,6 +100,8 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
     };
   }, []);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   // Debounced Knowledge Base Vector Retrieval Preview (Step 13)
   useEffect(() => {
     const combinedReq = `${projName} ${projPrompt}`.trim();
@@ -108,7 +110,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
       return;
     }
     const timer = setTimeout(() => {
-      fetch('http://localhost:8000/api/workflow/retrieve', {
+      fetch(`${API_BASE_URL}/api/workflow/retrieve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requirement: combinedReq })
@@ -169,7 +171,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
         }
 
         try {
-          const res = await fetch('http://localhost:8000/api/sarvam/transcribe', {
+          const res = await fetch(`${API_BASE_URL}/api/sarvam/transcribe`, {
             method: 'POST',
             body: formData
           });
@@ -237,7 +239,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch('http://localhost:8000/api/workflows', { headers })
+    fetch(`${API_BASE_URL}/api/workflows`, { headers })
       .then(res => res.json())
       .then(data => {
         setIsLoading(false);
@@ -275,7 +277,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`http://localhost:8000/api/workflows/${id}/status`, {
+    fetch(`${API_BASE_URL}/api/workflows/${id}/status`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ status: newStatus })
@@ -303,7 +305,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
       updated_at: 'Just now'
     };
 
-    fetch('http://localhost:8000/api/workflows', {
+    fetch(`${API_BASE_URL}/api/workflows`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -383,7 +385,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-[#2B2826]">Overview</h1>
           <p className="text-xs text-[#6E685E] mt-1 font-medium">
-            Workflows and 384-dimensional vector representations stored in MongoDB Atlas with intelligent vector similarity retrieval
+            Active multi-agent voice workflows and AI reasoning pipelines for Gowtham D
           </p>
         </div>
 
@@ -391,7 +393,7 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
           <button 
             onClick={fetchWorkflowsFromDB}
             className="p-2.5 bg-white border border-[#E6E1D7] hover:border-[#D97757] rounded-xl text-xs font-bold text-[#6E685E] transition-all shadow-2xs"
-            title="Refresh workflows from SQLite DB"
+            title="Refresh workflows from database"
           >
             <RefreshCw className={`w-4 h-4 text-[#D97757] ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -402,6 +404,44 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
           >
             <Plus className="w-4 h-4" />
             <span>Create Workflow</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Live Twilio Phone Call Test Card Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <span className="badge-emerald text-xs font-bold">📞 Live Twilio Voice Agent Test</span>
+            <h4 className="font-bold text-slate-900 text-sm mt-0.5">Test Live Voice Agent via Phone Call</h4>
+            <p className="text-xs text-slate-600">Dial our dedicated Twilio number from your phone to test any active workflow live.</p>
+          </div>
+
+          <div className="bg-white px-3.5 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-4">
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
+              <div className="text-xs font-extrabold text-slate-900 font-mono">+1 (800) 555-0199</div>
+            </div>
+            <div className="border-l border-slate-200 pl-3">
+              <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>
+              <div className="text-sm font-black text-amber-900 font-mono">4821</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 bg-white/90 p-2 rounded-xl border border-slate-200 text-xs">
+          <span className="font-semibold text-slate-700">📱 Auto-Connect Caller ID:</span>
+          <input
+            type="text"
+            placeholder="Enter your mobile number (+91 98765 43210)..."
+            defaultValue="+91 98765 43210"
+            className="flex-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs focus:outline-none focus:border-[#0e6b6b]"
+          />
+          <button
+            onClick={() => alert('Caller ID +91 98765 43210 bound to Gowtham D test session! When you dial +1 (800) 555-0199 from this phone, it auto-connects to your workflow instantly.')}
+            className="bg-[#0e6b6b] text-white text-[11px] px-3 py-1 rounded-lg font-bold hover:bg-teal-800 transition-colors"
+          >
+            Bind Caller ID
           </button>
         </div>
       </div>

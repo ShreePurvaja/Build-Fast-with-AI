@@ -80,7 +80,8 @@ export default function Home() {
 
     // Verify session token with backend (syncs latest user profile & workflows)
     if (token) {
-      fetch('http://localhost:8000/api/auth/me', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
@@ -101,7 +102,7 @@ export default function Home() {
             }
 
             // Fetch only this user's authenticated workflows
-            fetch('http://localhost:8000/api/workflows', {
+            fetch(`${API_BASE_URL}/api/workflows`, {
               headers: { 'Authorization': `Bearer ${token}` }
             })
               .then(res => res.json())
@@ -141,7 +142,8 @@ export default function Home() {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch('http://localhost:8000/api/workflows', { headers })
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${API_BASE_URL}/api/workflows`, { headers })
       .then(res => res.json())
       .then(data => {
         if (data && (data.workflows || data.projects)) {

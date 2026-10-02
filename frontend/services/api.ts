@@ -1,6 +1,7 @@
 import { WorkforceSpec, IntakeResponse, EscalationItem, AnalyticsSummary } from '../types/workforce';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = `${API_URL.replace(/\/$/, '')}/api`;
 
 export async function submitIntakePrompt(prompt: string): Promise<IntakeResponse> {
   try {

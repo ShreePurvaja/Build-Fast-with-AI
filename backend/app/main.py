@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import intake, workforces, tools, runtime, escalations, knowledge, analytics
+from app.routers import intake, workforces, tools, runtime, escalations, knowledge, analytics, twilio_voice
 
 app = FastAPI(
     title="AI Workforce Platform - Modular API Service",
@@ -24,6 +24,7 @@ app.include_router(runtime.router)
 app.include_router(escalations.router)
 app.include_router(knowledge.router)
 app.include_router(analytics.router)
+app.include_router(twilio_voice.router)
 
 @app.get("/")
 def read_root():

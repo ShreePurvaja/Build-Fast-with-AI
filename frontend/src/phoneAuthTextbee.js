@@ -7,7 +7,7 @@ let lastPhone = null;
 
 export async function sendPhoneOTP(phoneNumber, extra = {}) {
   lastPhone = phoneNumber;
-  const baseUrl = "http://localhost:8000";
+  const baseUrl = API;
   const res = await fetch(`${baseUrl}/api/auth/send-phone-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

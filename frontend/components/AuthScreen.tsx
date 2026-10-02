@@ -111,7 +111,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setOtpMsg(null);
     setOtpCode(['', '', '', '', '', '']);
 
-    fetch('http://localhost:8000/api/auth/send-email-otp', {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+    fetch(`${API_BASE_URL}/api/auth/send-email-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -251,7 +253,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
 
     // Email Resend
-    fetch('http://localhost:8000/api/auth/send-email-otp', {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${API_BASE_URL}/api/auth/send-email-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -329,7 +332,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
 
     // Email verification
-    fetch('http://localhost:8000/api/auth/verify-email-otp', {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${API_BASE_URL}/api/auth/verify-email-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -364,7 +368,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       const googleUser = await signInWithGoogle();
-      const apiUrl = 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api/auth/google`, {
         method: 'POST',
         credentials: 'include',
@@ -407,7 +411,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setMsg(null);
 
-    fetch('http://localhost:8000/api/auth/demo-login', {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${API_BASE_URL}/api/auth/demo-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })

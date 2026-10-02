@@ -45,6 +45,83 @@ export const Step4Simulation: React.FC<Step4SimulationProps> = ({ spec, onNext, 
   const [runningSim, setRunningSim] = useState(false);
   const [photoAttached, setPhotoAttached] = useState<string | null>(null);
 
+  // Twilio Phone Test State
+  const [testPin, setTestPin] = useState<string>('4821');
+  const [userPhone, setUserPhone] = useState<string>('');
+  const [pinLoading, setPinLoading] = useState(false);
+
+  // Web Speech API Microphone State
+  const [isListening, setIsListening] = useState(false);
+  const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  const handleGenerateTwilioPin = async () => {
+    setPinLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/twilio/pin/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workforce_id: spec.id || 'wf_support',
+          caller_phone: userPhone || undefined
+        })
+      });
+      const data = await res.json();
+      if (data.pin) {
+        setTestPin(data.pin);
+      }
+    } catch (err) {
+      console.warn('Backend offline, generating client test PIN');
+      setTestPin(String(Math.floor(1000 + Math.random() * 9000)));
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const speakUtterance = (text: string) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleToggleMicrophone = () => {
+    if (typeof window === 'undefined') return;
+
+    if (isListening && recognitionInstance) {
+      recognitionInstance.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Browser Speech Recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setCustomInput(transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    setRecognitionInstance(recognition);
+    recognition.start();
+  };
+
   const handleRunPresetSimulation = () => {
     setRunningSim(true);
     setChatHistory([]);
@@ -94,19 +171,48 @@ export const Step4Simulation: React.FC<Step4SimulationProps> = ({ spec, onNext, 
     setChatHistory((prev) => [...prev, userTurn]);
     setCustomInput('');
     setPhotoAttached(null);
-    setActiveWorkerId('query_worker');
 
-    setTimeout(() => {
-      const agentTurn: ChatTurn = {
-        id: String(Date.now() + 1),
-        speaker: 'Query Worker',
-        workerId: 'query_worker',
-        text: `Query received: "${userTurn.text}". Processed via Knowledge Base pgvector lookup.`,
-        isUser: false,
-        idempotencyKey: `IK-${Math.random().toString(36).substring(7).toUpperCase()}`
-      };
-      setChatHistory((prev) => [...prev, agentTurn]);
-    }, 800);
+    // Call Backend Voice Engine
+    fetch(`${API_BASE_URL}/api/simulate/turn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workforce_id: spec.id || 'wf_support',
+        session_id: 'web_session_sim',
+        user_input: userTurn.text,
+        language: 'en'
+      })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const agentTurn: ChatTurn = {
+          id: String(Date.now() + 1),
+          speaker: data.speaker || 'Query Worker',
+          workerId: data.worker_id || 'query_worker',
+          text: data.text || 'Processing query...',
+          isUser: false,
+          toolUsed: data.tool_used,
+          approvalRequired: data.approval_required,
+          idempotencyKey: data.idempotency_key
+        };
+        setChatHistory((prev) => [...prev, agentTurn]);
+        if (data.worker_id) setActiveWorkerId(data.worker_id);
+
+        // Speak Voice Agent Response Out Loud
+        speakUtterance(data.text);
+      })
+      .catch((err) => {
+        const agentTurn: ChatTurn = {
+          id: String(Date.now() + 1),
+          speaker: 'Query Worker',
+          workerId: 'query_worker',
+          text: `Query received: "${userTurn.text}". Processed via Knowledge Base lookup.`,
+          isUser: false,
+          idempotencyKey: `IK-${Math.random().toString(36).substring(7).toUpperCase()}`
+        };
+        setChatHistory((prev) => [...prev, agentTurn]);
+        speakUtterance(agentTurn.text);
+      });
   };
 
   return (
@@ -234,14 +340,74 @@ export const Step4Simulation: React.FC<Step4SimulationProps> = ({ spec, onNext, 
             ))}
           </div>
 
-          {/* User Input Bar */}
+          {/* Live Voice Testing Modes: Web Microphone & Twilio Phone Call */}
+          <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 p-4 rounded-xl border border-emerald-200 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <span className="badge-emerald text-xs font-bold">🎙️ Voice Agent Studio</span>
+                <h4 className="font-bold text-slate-900 text-sm mt-0.5">Test Live Voice Agent</h4>
+                <p className="text-xs text-slate-600">Test via live browser microphone or dial our dedicated Twilio phone number.</p>
+              </div>
+
+              {/* Twilio Call Info Card */}
+              <div className="bg-white px-3 py-2 rounded-xl border border-emerald-300 shadow-2xs flex items-center space-x-3">
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono font-bold">Twilio Dedicated Number</div>
+                  <div className="text-xs font-bold text-slate-900 font-mono">+1 (800) 555-0199</div>
+                </div>
+                <div className="border-l border-slate-200 pl-3">
+                  <div className="text-[10px] text-amber-700 font-bold uppercase font-mono">Test PIN</div>
+                  <div className="text-sm font-extrabold text-amber-900 font-mono">{testPin || 'GEN-PIN'}</div>
+                </div>
+                <button
+                  onClick={handleGenerateTwilioPin}
+                  className="btn-emerald text-[11px] py-1 px-2.5"
+                  title="Generate new PIN / Register Phone Number"
+                >
+                  {pinLoading ? '...' : 'Get PIN'}
+                </button>
+              </div>
+            </div>
+
+            {/* Phone Number Registration Row for Caller ID Auto-Connect */}
+            <div className="flex items-center space-x-2 bg-white/80 p-2 rounded-lg border border-slate-200 text-xs">
+              <span className="font-semibold text-slate-700">📱 Auto-Connect Caller ID:</span>
+              <input
+                type="text"
+                value={userPhone}
+                onChange={(e) => setUserPhone(e.target.value)}
+                placeholder="Enter your phone (+91 98765 43210)..."
+                className="flex-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-xs focus:outline-none focus:border-[#0e6b6b]"
+              />
+              <button
+                onClick={handleGenerateTwilioPin}
+                className="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded font-bold hover:bg-slate-900"
+              >
+                Bind Caller ID
+              </button>
+            </div>
+          </div>
+
+          {/* User Input Bar with Live Web Microphone Button */}
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center space-x-2">
+            <button
+              onClick={handleToggleMicrophone}
+              className={`p-2.5 rounded-xl text-xs border font-bold flex items-center gap-1.5 transition-all ${
+                isListening
+                  ? 'bg-red-500 text-white border-red-600 animate-pulse'
+                  : 'bg-emerald-700 text-white border-emerald-800 hover:bg-emerald-800'
+              }`}
+              title="Toggle Browser Microphone"
+            >
+              <span>{isListening ? '🛑 Stop Listening' : '🎤 Speak (Mic)'}</span>
+            </button>
+
             <input
               type="text"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendCustomMessage()}
-              placeholder="Type or speak custom customer query in any Indic language..."
+              placeholder={isListening ? 'Listening to microphone speech...' : 'Type or speak custom query in Tamil/Hinglish/English...'}
               className="flex-1 text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0e6b6b]"
             />
             

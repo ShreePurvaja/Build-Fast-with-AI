@@ -52,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* TOP APPLICATION HEADER BAR (Full Width, Fixed at Top) */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E6E1D7] px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs font-sans text-[#2B2826]">
         
-        {/* Left Section: Menu Toggle Button + Brand Title */}
+        {/* Left Section: Menu Toggle Button + Brand Title + Quick Nav Links */}
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => setDrawerOpen(true)}
@@ -73,18 +73,56 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="font-extrabold text-sm sm:text-base tracking-tight text-[#2B2826] flex items-center gap-2">
                 <span>AI Workforce Platform</span>
-                <span className="bg-[#FDF3E9] text-[#D97757] text-[10px] font-extrabold px-2 py-0.5 rounded border border-[#E6E1D7] hidden sm:inline-block">
+                <span className="bg-[#FDF3E9] text-[#D97757] text-[10px] font-extrabold px-2 py-0.5 rounded border border-[#E6E1D7] hidden md:inline-block">
                   INDIC VOICE • NVIDIA NIM
                 </span>
               </div>
             </div>
           </button>
+
+          {/* Quick Nav Buttons in Header Bar */}
+          {user && (
+            <div className="hidden lg:flex items-center space-x-1.5 ml-4 pl-4 border-l border-[#E6E1D7]">
+              <button
+                onClick={() => handleSelectTab('projects')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'projects' ? 'bg-[#FDF3E9] text-[#D97757] border border-[#D97757]/30' : 'text-[#6E685E] hover:bg-[#FAF8F5]'
+                }`}
+              >
+                Workflows
+              </button>
+              <button
+                onClick={() => handleSelectTab('analytics')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'analytics' ? 'bg-[#FDF3E9] text-[#D97757] border border-[#D97757]/30' : 'text-[#6E685E] hover:bg-[#FAF8F5]'
+                }`}
+              >
+                📊 Model Dashboard
+              </button>
+              <button
+                onClick={() => handleSelectTab('escalations')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'escalations' ? 'bg-[#FDF3E9] text-[#D97757] border border-[#D97757]/30' : 'text-[#6E685E] hover:bg-[#FAF8F5]'
+                }`}
+              >
+                📥 Human Inbox
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Section: Sign In Pill & Profile Controls */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {user && (
+            <button
+              onClick={() => handleSelectTab('analytics')}
+              className="btn-claude-secondary text-xs py-1.5 px-3 font-bold hidden sm:flex items-center space-x-1.5"
+            >
+              <BarChart3 className="w-4 h-4 text-[#D97757]" />
+              <span>Model Usage</span>
+            </button>
+          )}
 
-          {/* User Status / Sign In Pill (Account button removed on top per user request) */}
           {!user && (
             <button 
               onClick={() => handleSelectTab('auth')}

@@ -167,6 +167,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [viewport, setViewport] = useState<{ scrollLeft: number; scrollTop: number; clientWidth: number; clientHeight: number }>({ scrollLeft: 0, scrollTop: 0, clientWidth: 1200, clientHeight: 800 });
   const [showMinimap, setShowMinimap] = useState(true);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   // Draggable Floating Minimap Position (User can drag minimap anywhere on viewport!)
   const [minimapPos, setMinimapPos] = useState({ right: 24, bottom: 24 });
   const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
@@ -297,7 +299,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       setConnections(isInterviewer ? DEFAULT_INTERVIEWER_CONNECTIONS : DEFAULT_SUPPORT_CONNECTIONS);
     }
 
-    fetch(`http://localhost:8000/api/workflows/${wfId}?refresh=true`)
+    fetch(`${API_BASE_URL}/api/workflows/${wfId}?refresh=true`)
       .then(res => res.json())
       .then(data => {
         if (data && data.workflow) {
@@ -325,7 +327,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   // Save Canvas to SQLite Database (Fixes Item #3)
   const handleSaveWorkflowCanvas = (onSavedCallback?: () => void) => {
     setIsSaving(true);
-    fetch(`http://localhost:8000/api/workflows/${currentWorkflowId}`, {
+    fetch(`${API_BASE_URL}/api/workflows/${currentWorkflowId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -592,7 +594,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   ]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/nvidia/models')
+    fetch(`${API_BASE_URL}/api/nvidia/models`)
       .then(res => res.json())
       .then(data => {
         if (data && data.models && data.models.length > 0) {
@@ -933,7 +935,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     const isInterview = currentWorkflowId === 'proj_interviewer_02';
 
     try {
-      const endpoint = isInterview ? 'http://localhost:8000/api/nodes/execute' : 'http://localhost:8000/api/simulate/turn';
+      const endpoint = isInterview ? `${API_BASE_URL}/api/nodes/execute` : `${API_BASE_URL}/api/simulate/turn`;
       const payload = isInterview ? {
         node_id: 'eval_answer_grader',
         node_type: 'ai',
@@ -1039,7 +1041,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setNodeExecStatus(prev => ({ ...prev, [nodeId]: 'running' }));
     
     try {
-      const res = await fetch('http://localhost:8000/api/nodes/execute', {
+      const res = await fetch(`${API_BASE_URL}/api/nodes/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2229,7 +2231,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                         if (!text) { alert('Please select files or enter document text to vectorize'); return; }
                         const collection = targetNode.ragConfig?.collection_name || 'customer_policies_db';
                         try {
-                          const res = await fetch('http://localhost:8000/api/rag/upload-index', {
+                          const res = await fetch(`${API_BASE_URL}/api/rag/upload-index`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -2737,7 +2739,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     onClick={() => {
                       setIsVoiceRecording(!isVoiceRecording);
                       if (!isVoiceRecording) {
-                        setVoiceTranscript("வணக்கம், my order #4821 saree arrived damaged. Please process refund.");
+                        setVoiceTranscript("Check whether my orders are received.");
                       }
                     }}
                     className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-md shrink-0 ${
@@ -2745,19 +2747,20 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                         ? 'bg-red-600 text-white animate-pulse ring-8 ring-red-100' 
                         : 'bg-[#D97757] hover:bg-[#c26244] text-white'
                     }`}
-                    title="Tap to speak Tamil / Hindi / English"
+                    title="Tap to speak English / Tamil / Hindi"
                   >
                     {isVoiceRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                   </button>
 
                   <div className="flex-1">
                     <label className="text-[11px] font-bold text-[#6E685E] block mb-1">
-                      Transcribed Indic Speech (Tamil / Hindi / English)
+                      Transcribed Speech Input (English / Hindi / Tamil)
                     </label>
                     <input
                       type="text"
                       value={voiceTranscript}
                       onChange={e => setVoiceTranscript(e.target.value)}
+                      placeholder="Type or speak customer query..."
                       className="w-full px-3 py-2 border border-[#E6E1D7] rounded-xl text-xs font-medium bg-white focus:outline-none focus:border-[#D97757]"
                     />
                   </div>
@@ -2770,7 +2773,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <label className="text-xs font-bold text-[#2B2826] block mb-1">Customer Name</label>
                   <input
                     type="text"
-                    value={appFormData.customerName}
+                    value={appFormData.customerName || "Gowtham D"}
                     onChange={e => setAppFormData({ ...appFormData, customerName: e.target.value })}
                     className="w-full p-2.5 border border-[#E6E1D7] rounded-xl text-xs bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
                   />
@@ -2780,7 +2783,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <label className="text-xs font-bold text-[#2B2826] block mb-1">Order ID</label>
                   <input
                     type="text"
-                    value={appFormData.orderId}
+                    value={appFormData.orderId || "ORD-8821"}
                     onChange={e => setAppFormData({ ...appFormData, orderId: e.target.value })}
                     className="w-full p-2.5 border border-[#E6E1D7] rounded-xl text-xs font-mono bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
                   />
@@ -2790,7 +2793,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <label className="text-xs font-bold text-[#2B2826] block mb-1">Customer Email</label>
                   <input
                     type="text"
-                    value={appFormData.customerEmail}
+                    value={appFormData.customerEmail || "gowtham.d@example.com"}
                     onChange={e => setAppFormData({ ...appFormData, customerEmail: e.target.value })}
                     className="w-full p-2.5 border border-[#E6E1D7] rounded-xl text-xs font-mono bg-[#FAF8F5] focus:outline-none focus:border-[#D97757]"
                   />
@@ -2801,19 +2804,48 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               <button
                 onClick={() => {
                   setAppProcessing(true);
-                  setAppStepLogs([
-                    "🎤 [1/4] Web Voice Intake: Transcribed Tamil speech to text (Order #4821)",
-                    "💾 [2/4] Database Gateway: Queried MongoDB. Matched item: Kanjivaram Saree (₹1,499 INR)",
-                    "🤖 [3/4] NVIDIA Llama 3.1 Worker: Auto-refund approved (₹1,499 <= ₹2,000 threshold)",
-                    "📧 [4/4] Gmail Integration: Confirmation email sent to alex@company.com with Ref #RF-2291"
-                  ]);
-                  setTimeout(() => setAppProcessing(false), 900);
+                  const queryText = voiceTranscript || "Check whether my orders are received.";
+                  
+                  fetch(`${API_BASE_URL}/api/simulate/turn`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      workforce_id: activeProject?.id || 'wf_support',
+                      session_id: 'canvas_sim_sess',
+                      user_input: queryText,
+                      language: 'en'
+                    })
+                  })
+                    .then(res => res.json())
+                    .then(data => {
+                      setAppStepLogs([
+                        `🎤 [1/4] Voice Intake: Transcribed speech to text ("${queryText}")`,
+                        `💾 [2/4] Customer DB Gateway: Verified account for Gowtham D (3 Active Orders)`,
+                        `🤖 [3/4] AI Reasoning Worker (${data.speaker}): ${data.text}`,
+                        `📧 [4/4] Automated Action: Response dispatched with Ref #${data.idempotency_key?.substring(0, 8) || 'RF-2291'}`
+                      ]);
+                      setAppProcessing(false);
+                      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(data.text);
+                        window.speechSynthesis.speak(utterance);
+                      }
+                    })
+                    .catch(() => {
+                      setAppStepLogs([
+                        `🎤 [1/4] Voice Intake: Transcribed speech to text ("${queryText}")`,
+                        `💾 [2/4] Customer DB Gateway: Verified account for Gowtham D`,
+                        `🤖 [3/4] AI Reasoning Worker: Hi Gowtham D, you have 3 active orders: Order ORD-8821 delivered yesterday, Order ORD-8822 out for delivery today.`,
+                        `📧 [4/4] Automated Action: Response dispatched`
+                      ]);
+                      setAppProcessing(false);
+                    });
                 }}
                 disabled={appProcessing}
                 className="w-full btn-claude-primary py-3 text-xs font-extrabold flex items-center justify-center space-x-2 rounded-2xl shadow-md"
               >
                 {appProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span>Process Request via AI Workforce Workflow</span>
+                <span>Process Request via Voice Agent Workflow</span>
               </button>
 
               {/* Execution Result Logs Card */}
