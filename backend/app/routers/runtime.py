@@ -66,13 +66,14 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
         f"1. You are speaking directly over a live phone call. Be warm, natural, and helpful.\n"
         f"2. NEVER mention 'MongoDB', 'database', 'vector store', 'internal system', 'JSON', 'algorithm', or technical jargon.\n"
         f"3. Maximum 1 to 2 short sentences total. Ready for Text-to-Speech audio playback.\n"
-        f"4. Respond directly in {lang_desc}."
+        f"4. Respond directly in {lang_desc}.\n"
+        f"5. DO NOT start with any greeting (such as 'Hello', 'Hi', 'Good morning', 'Good afternoon', 'Vanakkam', 'Namaste'). Jump straight to answering the user's question directly since you are already mid-conversation."
     )
 
     payload = json.dumps({
         "model": "meta/llama-3.2-11b-vision-instruct",
         "messages": [
-            {"role": "system", "content": "You are a professional customer service voice AI assistant."},
+            {"role": "system", "content": "You are a professional customer service voice AI assistant answering turn queries mid-call."},
             {"role": "user", "content": full_prompt}
         ],
         "max_tokens": 120,
@@ -91,6 +92,10 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
             data = json.loads(resp.read().decode())
             ans = data["choices"][0]["message"]["content"].strip()
             if ans:
+                ans = ans.strip('"\'')
+                ans = re.sub(r'^(?:hello|hi|hey|good\s+(?:morning|afternoon|evening)|vanakkam|namaste)(?:\s+[a-z0-9_\-\.]+)?[\s,!\.-]+', '', ans, flags=re.IGNORECASE).strip()
+                if ans:
+                    ans = ans[0].upper() + ans[1:]
                 return ans
     except Exception as e:
         print(f"[NVIDIA LLM Engine Notice] {e}")
@@ -244,7 +249,7 @@ def simulate_session_turn(req: SimulateTurnRequest):
             elif "8823" in text_lower:
                 llm_response = f"Order ORD-8823 for Cotton Formal Shirt is currently processing and expected on Oct 4."
             else:
-                llm_response = f"Hi {customer_name}, you have 3 active orders: your Kanjivaram Saree was delivered, your Earbuds are out for delivery today, and your Formal Shirt is processing."
+                llm_response = f"You have 3 active orders: your Kanjivaram Saree was delivered, your Earbuds are out for delivery today, and your Formal Shirt is processing."
 
         return {
             "turn_index": 2,
@@ -280,7 +285,7 @@ def simulate_session_turn(req: SimulateTurnRequest):
         )
 
         if not llm_response:
-            llm_response = f"Hi {customer_name}, your product demo for {lead.get('company', 'Tech Solutions')} is confirmed for {lead.get('demo_time')} with representative {lead.get('rep')}."
+            llm_response = f"Your product demo for {lead.get('company', 'Tech Solutions')} is confirmed for {lead.get('demo_time')} with representative {lead.get('rep')}."
 
         return {
             "turn_index": 2,
@@ -317,7 +322,7 @@ def simulate_session_turn(req: SimulateTurnRequest):
         )
 
         if not llm_response:
-            llm_response = f"Hi {customer_name}, your appointment with {apt.get('doctor')} at {apt.get('clinic')} is confirmed for {apt.get('slot_time')}."
+            llm_response = f"Your appointment with {apt.get('doctor')} at {apt.get('clinic')} is confirmed for {apt.get('slot_time')}."
 
         return {
             "turn_index": 2,
@@ -354,7 +359,7 @@ def simulate_session_turn(req: SimulateTurnRequest):
         )
 
         if not llm_response:
-            llm_response = f"Hi {customer_name}, your application for {cand.get('role')} has passed technical screening with a score of {cand.get('screening_score')}%. Your interview is scheduled for {cand.get('interview_time')}."
+            llm_response = f"Your application for {cand.get('role')} has passed technical screening with a score of {cand.get('screening_score')}%. Your interview is scheduled for {cand.get('interview_time')}."
 
         return {
             "turn_index": 2,
@@ -387,7 +392,7 @@ def simulate_session_turn(req: SimulateTurnRequest):
     )
 
     if not llm_response:
-        llm_response = f"Hi {customer_name}, standard delivery takes 3 to 5 business days, and returns are accepted within 7 days of delivery."
+        llm_response = f"Standard delivery takes 3 to 5 business days, and returns are accepted within 7 days of delivery."
 
     return {
         "turn_index": 1,
