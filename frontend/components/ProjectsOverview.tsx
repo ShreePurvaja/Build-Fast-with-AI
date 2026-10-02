@@ -18,7 +18,8 @@ import {
   Square,
   CheckCircle2,
   Volume2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 
 interface Project {
@@ -282,6 +283,29 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
       headers,
       body: JSON.stringify({ status: newStatus })
     }).catch(err => console.error("Error updating workflow status in SQLite:", err));
+  };
+
+  // DELETE WORKFLOW FROM BACKEND & LOCAL STATE
+  const handleDeleteWorkflow = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete workflow '${name}'? This action cannot be undone.`)) {
+      return;
+    }
+
+    setProjectList(prev => prev.filter(p => p.id !== id));
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      await fetch(`${API_BASE_URL}/api/workflows/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+    } catch (err) {
+      console.error("Error deleting workflow from database:", err);
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -557,6 +581,15 @@ export const ProjectsOverview: React.FC<ProjectsOverviewProps> = ({
               >
                 <span>Canvas</span>
                 <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Delete Workflow Button */}
+              <button 
+                onClick={(e) => handleDeleteWorkflow(proj.id, proj.name, e)}
+                className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-200 transition-all"
+                title={`Delete workflow '${proj.name}'`}
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>

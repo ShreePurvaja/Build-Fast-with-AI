@@ -2040,8 +2040,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   </div>
                 )}
 
-                {/* RESUME UPLOAD MODULE (Node 1 - Optional Resume Upload for Candidate Personalization) */}
-                {(targetNode.id === 'node-1' || targetNode.icon === 'doc_resume_parser' || targetNode.name.toLowerCase().includes('resume')) && (
+                {/* RESUME UPLOAD MODULE (Only for AI Interviewer Workflows) */}
+                {(currentWorkflowId === 'proj_interviewer_02' || currentWorkflowId.includes('interviewer') || workflowTitle.toLowerCase().includes('interview') || workflowTitle.toLowerCase().includes('hr') || workflowTitle.toLowerCase().includes('resume')) && (targetNode.icon === 'doc_resume_parser' || targetNode.name.toLowerCase().includes('resume') || targetNode.id === 'node-1') && (
                   <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2 text-xs font-bold text-amber-900">
