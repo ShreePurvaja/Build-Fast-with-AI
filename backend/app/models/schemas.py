@@ -49,8 +49,8 @@ class ToolConnectRequest(BaseModel):
     use_demo: bool = True
 
 class SimulateTurnRequest(BaseModel):
-    workforce_id: str
-    session_id: str
+    workforce_id: Optional[str] = "wf_support"
+    session_id: Optional[str] = "session_default"
     user_input: str
     language: str = "en"
     customer_id: Optional[str] = "cust_gowtham"

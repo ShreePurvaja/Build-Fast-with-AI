@@ -1,3 +1,4 @@
+from app.models.schemas import SimulateTurnRequest
 import os
 import uuid
 import time
@@ -1043,6 +1044,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.routers import runtime, twilio_voice, intake, workforces, knowledge, escalations, analytics, tools
+
+app.include_router(runtime.router)
+app.include_router(twilio_voice.router)
+app.include_router(intake.router)
+app.include_router(workforces.router)
+app.include_router(knowledge.router)
+app.include_router(escalations.router)
+app.include_router(analytics.router)
+app.include_router(tools.router)
 
 # -----------------------------------------------------------------------------
 # REQUEST SCHEMAS
@@ -3003,89 +3015,8 @@ class TurnRequest(BaseModel):
     session_id: Optional[str] = None
 
 @app.post("/api/simulate/turn")
-def simulate_turn(req: TurnRequest):
-    text_input = req.user_input.strip()
-    text_lower = text_input.lower()
-    
-    is_tamil = "aagi" in text_lower or "vandhuchu" in text_lower or "venum" in text_lower or "kedaikuma" in text_lower or "aama" in text_lower or req.language == "ta"
-    idempotency_key = f"IK-{uuid.uuid4().hex[:8].upper()}"
-
-    if req.confirm_action:
-        return {
-            "turn_index": 4,
-            "speaker": "Refund Worker",
-            "worker_id": "refund",
-            "model_used": "meta/llama-3.2-11b-vision-instruct",
-            "text": "Refund started via Payment Gateway. Reference RF-2291. Money will reflect in 3-5 business days in MongoDB records." if not is_tamil else "Refund start aagiyuduchu. Reference RF-2291. 3-5 naatkul bank accounthil serum.",
-            "tool_used": "pay",
-            "action_taken": "create_refund",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": False,
-            "latency_ms": 145,
-            "database_target": "MongoDB Atlas"
-        }
-
-    if req.image_url:
-        return {
-            "turn_index": 3,
-            "speaker": "Refund Worker",
-            "worker_id": "refund",
-            "model_used": "meta/llama-3.2-11b-vision-instruct",
-            "text": "Damage verified from uploaded photo (torn fabric edge). Refund of ₹1,499 requires your confirmation. Shall I proceed?" if not is_tamil else "Photo check panni damage confirm aachu. Rs 1,499 refund panna unga approval venum. Confirm pannalama?",
-            "tool_used": "pay",
-            "action_taken": "verify_damage_image",
-            "approval_required": True,
-            "idempotency_key": idempotency_key,
-            "escalated": False,
-            "latency_ms": 280
-        }
-
-    if any(k in text_lower for k in ["order", "4821", "status", "delivery", "check"]):
-        return {
-            "turn_index": 2,
-            "speaker": "Order Verification Worker",
-            "worker_id": "order_check",
-            "model_used": "meta/llama-3.2-11b-vision-instruct",
-            "text": "Order #4821 found in MongoDB Atlas. Delivered 2 days ago via Express Courier. How can I assist with this item?" if not is_tamil else "Order #4821 MongoDB Atlas-il check panniachu. 2 naalaikku munnadi deliver aagi irukku.",
-            "tool_used": "mongodb_orders",
-            "action_taken": "get_order_by_id",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": False,
-            "latency_ms": 110
-        }
-
-    if any(k in text_lower for k in ["human", "agent", "supervisor", "speak to person", "complaint"]):
-        new_esc_id = f"ESC-{random.randint(9100, 9999)}"
-        return {
-            "turn_index": 5,
-            "speaker": "Escalation Worker",
-            "worker_id": "escalation",
-            "model_used": "nvidia/llama-3.1-nemotron-70b-instruct",
-            "text": "I have created an escalation ticket in MongoDB and notified our supervisor team with your full transcript state." if not is_tamil else "Unga query-ah human supervisor-kku pass panni MongoDB-il ticket create panniachu.",
-            "tool_used": "helpdesk",
-            "action_taken": "create_handoff_ticket",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": True,
-            "escalation_id": new_esc_id,
-            "latency_ms": 160
-        }
-
-    turn_res = {
-        "turn_index": 1,
-        "speaker": "Query Worker",
-        "worker_id": "query_worker",
-        "model_used": "meta/llama-3.2-11b-vision-instruct",
-        "text": f"I understand your query: '{req.user_input}'. Verified against MongoDB Atlas knowledge base." if not is_tamil else f"Unga query: '{req.user_input}'. MongoDB Atlas knowledge base-il check panni solgiren.",
-        "tool_used": "mongodb_kb",
-        "action_taken": "search_kb",
-        "idempotency_key": idempotency_key,
-        "approval_required": False,
-        "escalated": False,
-        "latency_ms": 95
-    }
+def simulate_turn(req: SimulateTurnRequest):
+    return runtime.simulate_session_turn(req)
     
     record_real_execution_telemetry({
         "id": f"req_{uuid.uuid4().hex[:6]}",

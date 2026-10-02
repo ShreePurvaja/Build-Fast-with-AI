@@ -167,7 +167,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [viewport, setViewport] = useState<{ scrollLeft: number; scrollTop: number; clientWidth: number; clientHeight: number }>({ scrollLeft: 0, scrollTop: 0, clientWidth: 1200, clientHeight: 800 });
   const [showMinimap, setShowMinimap] = useState(true);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+  const [voiceLanguage, setVoiceLanguage] = useState<'en-US' | 'ta-IN' | 'hi-IN'>('en-US');
 
   const [testPin, setTestPin] = useState<string | null>(null);
   const [pinLoading, setPinLoading] = useState(false);
@@ -893,8 +894,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       const sampleText = currentWorkflowId === 'proj_interviewer_02'
-        ? "In FastAPI, I use Motor connection pools and async await syntax to keep database operations non-blocking."
-        : "வணக்கம், my order #4821 saree arrived damaged. Please process refund.";
+        ? "In FastAPI, how do async route handlers handle concurrency?"
+        : "What is the status of my appointment or recent order?";
       setLiveSpeechTranscript(sampleText);
       setIsMicListening(true);
       setTimeout(() => {
@@ -908,7 +909,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = currentWorkflowId === 'proj_interviewer_02' ? 'en-US' : 'ta-IN';
+      recognition.lang = voiceLanguage;
 
       recognition.onstart = () => {
         setIsMicListening(true);
@@ -955,19 +956,12 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setLiveSpeechTranscript('');
     setActiveCallNodeStep("Node 3: Reasoning Agent Turn");
 
-    const isInterview = currentWorkflowId === 'proj_interviewer_02';
-
     try {
-      const endpoint = isInterview ? `${API_BASE_URL}/api/nodes/execute` : `${API_BASE_URL}/api/simulate/turn`;
-      const payload = isInterview ? {
-        node_id: 'eval_answer_grader',
-        node_type: 'ai',
-        model: 'meta/llama-3.2-11b-vision-instruct',
-        input_payload: { question_index: 1, transcript: userText }
-      } : {
+      const endpoint = `${API_BASE_URL}/api/simulate/turn`;
+      const payload = {
         user_input: userText,
-        workforce_id: activeProject?.id || 'wf_support',
-        language: 'en'
+        workforce_id: activeProject?.id || (currentWorkflowId === 'proj_interviewer_02' ? 'wf_hr' : 'wf_support'),
+        language: voiceLanguage.startsWith('ta') ? 'ta' : voiceLanguage.startsWith('hi') ? 'hi' : 'en'
       };
 
       const res = await fetch(endpoint, {
@@ -977,11 +971,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       });
       const data = await res.json();
 
-      const aiReplyText = isInterview 
-        ? `Great answer Rahul! Your response scored 8.8/10 on technical correctness. Moving to Question 2: How do you manage database migration rollbacks under high availability?`
-        : (data.text || "Hi Gowtham D, your order ORD-8821 for Kanjivaram Silk Saree was delivered yesterday, and order ORD-8822 for Earbuds is out for delivery today.");
-
-      const activeNodeLabel = isInterview ? "Node 6: Answer Grader (Score: 8.8/10)" : (data.worker_id ? `Node Step: ${data.worker_id}` : "Node Step: order_check");
+      const aiReplyText = data.text || "I have received your request and am retrieving the details from database.";
+      const activeNodeLabel = data.worker_id ? `Node Step: ${data.worker_id}` : "Node Step: reasoning_agent";
 
       const agentTurn = {
         id: `turn_${Date.now() + 1}`,
@@ -997,16 +988,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       speakTextWithBrowserTTS(aiReplyText);
 
     } catch (err) {
-      const fallbackText = isInterview
-        ? "Excellent answer Rahul! Score: 8.8/10. Let's move to the next technical question on database index strategies."
-        : "Hi Gowtham D, your order ORD-8821 for Kanjivaram Silk Saree was delivered yesterday, and order ORD-8822 for Earbuds is out for delivery today.";
+      const fallbackText = "I'm having trouble reaching the reasoning server right now. Please check your backend connection.";
 
       const agentTurn = {
         id: `turn_${Date.now() + 1}`,
         sender: 'agent' as const,
         text: fallbackText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        nodeStep: isInterview ? "Node 6: Answer Grader (8.8/10)" : "Node Step: order_check",
+        nodeStep: "Node Step: connection_error",
         latencyMs: 180
       };
 
@@ -3160,7 +3149,18 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
             {/* Modal Input Footer */}
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E6E1D7] space-y-3">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <select
+                  value={voiceLanguage}
+                  onChange={(e) => setVoiceLanguage(e.target.value as any)}
+                  className="px-2.5 py-3 border border-[#E6E1D7] rounded-2xl text-xs bg-white text-[#2B2826] font-bold focus:outline-none focus:border-[#D97757] shrink-0 cursor-pointer shadow-2xs"
+                  title="Select Voice Input Language"
+                >
+                  <option value="en-US">🌐 English (US/IN)</option>
+                  <option value="ta-IN">🇮🇳 Tamil (தமிழ்)</option>
+                  <option value="hi-IN">🇮🇳 Hindi (हिन्दी)</option>
+                </select>
+
                 <button
                   onClick={handleToggleMicListening}
                   className={`p-3.5 rounded-2xl text-white font-bold transition-all shadow-md flex items-center justify-center shrink-0 ${

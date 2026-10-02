@@ -70,7 +70,7 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
     )
 
     payload = json.dumps({
-        "model": "meta/llama-3.1-70b-instruct",
+        "model": "meta/llama-3.2-11b-vision-instruct",
         "messages": [
             {"role": "system", "content": "You are a professional customer service voice AI assistant."},
             {"role": "user", "content": full_prompt}
