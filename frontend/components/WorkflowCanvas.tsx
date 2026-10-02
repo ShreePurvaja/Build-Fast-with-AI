@@ -1203,8 +1203,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         setShowVoiceCallModal(true);
         if (callTurns.length === 0) {
           const initialGreeting = currentWorkflowId === 'proj_interviewer_02'
-            ? "Hello Rahul! Welcome to your Technical AI Engineer Interview. I've loaded your resume. Are you ready for Question 1?"
-            : "Hi Gowtham D! Welcome to AI Voice Support. How can I assist with your order, appointment, or query today?";
+            ? "Welcome to your AI Technical Interview! Let's begin with Question 1: In FastAPI, how do async route handlers handle concurrency without blocking the event loop?"
+            : "Welcome to AI Voice Assistant. How can I assist you with your orders, appointments, or inquiries today?";
           setCallTurns([{
             id: 'init_1',
             sender: 'agent',

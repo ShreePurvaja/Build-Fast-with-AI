@@ -347,19 +347,30 @@ def simulate_session_turn(req: SimulateTurnRequest):
             f"Applied Role: {cand.get('role', 'Senior Full Stack Engineer')}.\n"
             f"Tech Stack: {cand.get('tech_stack', 'Python, React, FastAPI, MongoDB')}.\n"
             f"ATS Screening Score: {cand.get('screening_score', 92)}%.\n"
-            f"Status: {cand.get('status', 'tech_screen_passed')}.\n"
-            f"Interview Time: {cand.get('interview_time', 'Oct 5, 2026 at 11:00 AM')}."
+            f"Status: {cand.get('status', 'tech_screen_passed')}."
+        )
+
+        system_prompt = (
+            f"You are a Senior AI Technical Interviewer conducting a live interactive interview for {customer_name} applying for {cand.get('role', 'Senior Full Stack Engineer')}.\n"
+            f"RULES:\n"
+            f"1. Evaluate the candidate's spoken response in 1 short sentence.\n"
+            f"2. IMMEDIATELY ask the next technical interview question (e.g. on FastAPI concurrency, database indexing, or async event loops).\n"
+            f"3. Do NOT ask 'Are you ready for the question?'. Ask the technical question directly so the candidate can answer!\n"
+            f"4. Maximum 2 short sentences total."
         )
 
         llm_response = query_real_nvidia_llm(
             user_input=text_input,
-            system_prompt="You are an AI HR technical interviewer conducting candidate screening.",
+            system_prompt=system_prompt,
             context=hr_context,
             lang=lang
         )
 
         if not llm_response:
-            llm_response = f"Your application for {cand.get('role')} has passed technical screening with a score of {cand.get('screening_score')}%. Your interview is scheduled for {cand.get('interview_time')}."
+            if "yes" in text_lower or "ready" in text_lower or "start" in text_lower:
+                llm_response = "Great! Let's start with Question 1: In FastAPI, how do async route handlers manage database concurrency without blocking the event loop?"
+            else:
+                llm_response = "Good explanation! Question 2: How do you handle database rollbacks and connection pooling under high availability?"
 
         return {
             "turn_index": 2,
