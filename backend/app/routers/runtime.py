@@ -102,6 +102,33 @@ def query_real_nvidia_llm(user_input: str, system_prompt: str, context: str, lan
 
     return None
 
+def check_guardrail_violation(text_input: str, wf_id: str) -> Optional[str]:
+    text_lower = text_input.lower()
+    
+    # 1. Jailbreak & Prompt Injection Defense
+    jailbreak_terms = [
+        "ignore previous instructions", "system prompt", "reveal prompt",
+        "bypass rules", "jailbreak", "override safety", "act as dan",
+        "forget instructions", "reveal system keys"
+    ]
+    if any(t in text_lower for t in jailbreak_terms):
+        return "I am an AI voice agent operating under strict topic guardrails. I cannot process prompt override requests. How can I help you with your workflow today?"
+
+    # 2. Harmful / Malicious Content Defense
+    harm_terms = ["make a bomb", "hack system", "stolen card", "illegal activity", "create malware"]
+    if any(t in text_lower for t in harm_terms):
+        return "I am unable to assist with illegal or harmful requests. Please ask a question related to your active workflow."
+
+    # 3. Off-Topic Knowledge Boundary Guardrail
+    off_topic_terms = [
+        "recipe for cake", "who won cricket", "tell a joke", "write a poem", 
+        "capital of france", "movie review", "weather forecast"
+    ]
+    if any(t in text_lower for t in off_topic_terms):
+        return "I am authorized to assist only with your active workflow (orders, doctor appointments, sales, or technical interviews). Please ask a relevant workflow question."
+
+    return None
+
 @router.post("/turn")
 def simulate_session_turn(req: SimulateTurnRequest):
     wf_id = req.workforce_id or "wf_support"
@@ -117,6 +144,23 @@ def simulate_session_turn(req: SimulateTurnRequest):
 
     slot_store = SESSION_SLOTS_CACHE.setdefault(req.session_id, SlotStore())
     idempotency_key = generate_idempotency_key("org_sme_001", wf_id, {"session_id": req.session_id, "text": text_input[:20]})
+
+    # 0. Topic Guardrails & Jailbreak Defense
+    guardrail_msg = check_guardrail_violation(text_input, wf_id)
+    if guardrail_msg:
+        return {
+            "turn_index": 1,
+            "speaker": "Safety Guardrail Node",
+            "worker_id": "guardrail",
+            "text": format_voice_response(guardrail_msg, lang=lang),
+            "audio_filler": None,
+            "tool_used": None,
+            "action_taken": "enforce_topic_guardrail",
+            "idempotency_key": idempotency_key,
+            "approval_required": False,
+            "escalated": False,
+            "latency_ms": 40
+        }
 
     # 1. Emergency Triage Check (Highest Priority)
     if detect_emergency(text_input):
@@ -185,161 +229,13 @@ def simulate_session_turn(req: SimulateTurnRequest):
             "latency_ms": 140
         }
 
-    # WORKFLOW 1: Customer Support & Refunds (wf_support / proj_support_01)
-    if wf_id in ["wf_support", "proj_support_01"] or any(k in text_lower for k in ["order", "refund", "saree", "earbuds", "shirt", "item", "delivery", "track"]):
-        if req.confirm_action:
-            success, res = execute_tool_gateway(
-                tenant_id="org_sme_001",
-                customer_id=customer_id,
-                tool_name="pay",
-                args={"order_id": "ORD-8821", "action": "create_refund"},
-                confirmed_by_user=True,
-                auto_refund_limit=2000
-            )
-            raw_resp = f"Refund of ₹{res.get('amount', 1499)} initiated for {res.get('item', 'Kanjivaram Saree')}. Reference {res.get('refund_ref', 'RF-2291')}. Amount will reflect in 3 to 5 business days."
-            return {
-                "turn_index": 4,
-                "speaker": "Refund Worker",
-                "worker_id": "refund",
-                "text": format_voice_response(raw_resp, lang=lang),
-                "audio_filler": get_audio_filler("pay", lang=lang),
-                "tool_used": "pay",
-                "action_taken": "create_refund",
-                "idempotency_key": idempotency_key,
-                "approval_required": False,
-                "escalated": False,
-                "latency_ms": 130
-            }
+    # STRICT WORKFORCE ROUTING BY WORKFORCE ID FIRST!
+    is_interviewer = wf_id in ["proj_interviewer_02", "wf_hr"]
+    is_booking = (not is_interviewer) and (wf_id in ["proj_booking_01", "wf_booking"])
+    is_sales = (not is_interviewer and not is_booking) and (wf_id in ["proj_sales_01", "wf_sales"])
 
-        if req.image_url:
-            raw_resp = "Damage verified from uploaded photo. Refund of 14 hundred and 99 rupees requires your confirmation. Shall I proceed?"
-            return {
-                "turn_index": 3,
-                "speaker": "Refund Worker",
-                "worker_id": "refund",
-                "text": format_voice_response(raw_resp, lang=lang),
-                "audio_filler": get_audio_filler("pay", lang=lang),
-                "tool_used": "pay",
-                "action_taken": "verify_damage_image",
-                "approval_required": True,
-                "idempotency_key": idempotency_key,
-                "escalated": False,
-                "latency_ms": 250
-            }
-
-        # Query Database Records for Customer
-        user_orders = [o for o in ORDERS_DB.values() if o["customer_id"] == customer_id]
-        orders_context = f"Customer Name: {customer_name}. Account ID: {customer_id}.\nActive Orders:\n"
-        for o in user_orders:
-            orders_context += f"- Order {o['id']}: Item {o['item_name']}, Price ₹{o['price']}, Status {o['status']}, Delivery Info: {o.get('delivery_date') or o.get('expected_delivery')}.\n"
-
-        llm_response = query_real_nvidia_llm(
-            user_input=text_input,
-            system_prompt="You are an order verification & support assistant for an e-commerce platform.",
-            context=orders_context,
-            lang=lang
-        )
-
-        if not llm_response:
-            # Clean grounded response from DB context
-            if "8821" in text_lower:
-                llm_response = f"Order ORD-8821 for Kanjivaram Silk Saree was delivered on Oct 1 via Express Courier."
-            elif "8822" in text_lower:
-                llm_response = f"Order ORD-8822 for Wireless Noise-Canceling Earbuds is out for delivery today by 4:00 PM via BlueDart."
-            elif "8823" in text_lower:
-                llm_response = f"Order ORD-8823 for Cotton Formal Shirt is currently processing and expected on Oct 4."
-            else:
-                llm_response = f"You have 3 active orders: your Kanjivaram Saree was delivered, your Earbuds are out for delivery today, and your Formal Shirt is processing."
-
-        return {
-            "turn_index": 2,
-            "speaker": "Order Verification Worker",
-            "worker_id": "order_check",
-            "text": format_voice_response(llm_response, lang=lang),
-            "audio_filler": get_audio_filler("orders", lang=lang),
-            "tool_used": "orders",
-            "action_taken": "get_orders_by_customer",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": False,
-            "latency_ms": 115
-        }
-
-    # WORKFLOW 2: Sales Lead Qualification & Booking (wf_sales / proj_sales_01)
-    if wf_id in ["wf_sales", "proj_sales_01"] or any(k in text_lower for k in ["sales", "demo", "lead", "budget", "seats", "pricing"]):
-        lead = LEADS_DB.get(customer_id, {})
-        sales_context = (
-            f"Customer Name: {customer_name}.\n"
-            f"Lead Company: {lead.get('company', 'Tech Solutions')}.\n"
-            f"Seats requested: {lead.get('seats', 50)} seats.\n"
-            f"Monthly Budget: {lead.get('budget', '1.5 Lakhs/mo')}.\n"
-            f"Demo Schedule: {lead.get('demo_time', 'Oct 3, 2026 at 3:00 PM IST')}.\n"
-            f"Assigned Representative: {lead.get('rep', 'Senior Account Exec Rahul')}."
-        )
-
-        llm_response = query_real_nvidia_llm(
-            user_input=text_input,
-            system_prompt="You are a B2B SaaS sales lead qualification executive scheduling product demos.",
-            context=sales_context,
-            lang=lang
-        )
-
-        if not llm_response:
-            llm_response = f"Your product demo for {lead.get('company', 'Tech Solutions')} is confirmed for {lead.get('demo_time')} with representative {lead.get('rep')}."
-
-        return {
-            "turn_index": 2,
-            "speaker": "Demo Scheduler",
-            "worker_id": "scheduler",
-            "text": format_voice_response(llm_response, lang=lang),
-            "audio_filler": get_audio_filler("cal", lang=lang),
-            "tool_used": "cal",
-            "action_taken": "get_lead_demo_schedule",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": False,
-            "latency_ms": 120
-        }
-
-    # WORKFLOW 3: Patient OPD Appointment Booking (wf_booking / proj_booking_01)
-    if wf_id in ["wf_booking", "proj_booking_01"] or any(k in text_lower for k in ["appointment", "doctor", "clinic", "opd", "consultation", "hospital", "raman", "anitha"]):
-        apt = APPOINTMENTS_DB.get(customer_id, {})
-        apt_context = (
-            f"Patient Name: {customer_name}.\n"
-            f"Appointment ID: {apt.get('appointment_id', 'APT-7721')}.\n"
-            f"Doctor: {apt.get('doctor', 'Dr. Anitha (Cardiology Specialist)')}.\n"
-            f"Clinic: {apt.get('clinic', 'Apollo Clinic, T-Nagar')}.\n"
-            f"Scheduled Slot: {apt.get('slot_time', 'Oct 4, 2026 at 10:30 AM')}.\n"
-            f"Consultation Fee: {apt.get('fee', '₹800')}.\n"
-            f"Status: {apt.get('status', 'confirmed')}."
-        )
-
-        llm_response = query_real_nvidia_llm(
-            user_input=text_input,
-            system_prompt="You are a medical OPD clinic receptionist managing doctor appointment bookings.",
-            context=apt_context,
-            lang=lang
-        )
-
-        if not llm_response:
-            llm_response = f"Your appointment with {apt.get('doctor')} at {apt.get('clinic')} is confirmed for {apt.get('slot_time')}."
-
-        return {
-            "turn_index": 2,
-            "speaker": "Booking Worker",
-            "worker_id": "booking_worker",
-            "text": format_voice_response(llm_response, lang=lang),
-            "audio_filler": get_audio_filler("cal", lang=lang),
-            "tool_used": "cal",
-            "action_taken": "get_appointment_details",
-            "idempotency_key": idempotency_key,
-            "approval_required": False,
-            "escalated": False,
-            "latency_ms": 110
-        }
-
-    # WORKFLOW 4: Recruitment Screening (wf_hr / proj_interviewer_02)
-    if wf_id in ["wf_hr", "proj_interviewer_02"] or any(k in text_lower for k in ["resume", "job", "interview", "candidate", "role", "score", "screening"]):
+    # WORKFLOW 4: Recruitment Screening & AI Technical Interviewer (wf_hr / proj_interviewer_02)
+    if is_interviewer or any(k in text_lower for k in ["interview", "candidate", "resume", "screening"]):
         cand = CANDIDATES_DB.get(customer_id, {})
         hr_context = (
             f"Candidate Name: {customer_name}.\n"
@@ -385,6 +281,158 @@ def simulate_session_turn(req: SimulateTurnRequest):
             "escalated": False,
             "latency_ms": 125
         }
+
+    # WORKFLOW 3: Patient OPD Appointment Booking (wf_booking / proj_booking_01)
+    if is_booking or any(k in text_lower for k in ["appointment", "doctor", "clinic", "opd", "consultation", "hospital", "raman", "anitha"]):
+        apt = APPOINTMENTS_DB.get(customer_id, {})
+        apt_context = (
+            f"Patient Name: {customer_name}.\n"
+            f"Appointment ID: {apt.get('appointment_id', 'APT-7721')}.\n"
+            f"Doctor: {apt.get('doctor', 'Dr. Anitha (Cardiology Specialist)')}.\n"
+            f"Clinic: {apt.get('clinic', 'Apollo Clinic, T-Nagar')}.\n"
+            f"Scheduled Slot: {apt.get('slot_time', 'Oct 4, 2026 at 10:30 AM')}.\n"
+            f"Consultation Fee: {apt.get('fee', '₹800')}.\n"
+            f"Status: {apt.get('status', 'confirmed')}."
+        )
+
+        llm_response = query_real_nvidia_llm(
+            user_input=text_input,
+            system_prompt="You are a medical OPD clinic receptionist managing doctor appointment bookings.",
+            context=apt_context,
+            lang=lang
+        )
+
+        if not llm_response:
+            llm_response = f"Your appointment with {apt.get('doctor')} at {apt.get('clinic')} is confirmed for {apt.get('slot_time')}."
+
+        return {
+            "turn_index": 2,
+            "speaker": "Booking Worker",
+            "worker_id": "booking_worker",
+            "text": format_voice_response(llm_response, lang=lang),
+            "audio_filler": get_audio_filler("cal", lang=lang),
+            "tool_used": "cal",
+            "action_taken": "get_appointment_details",
+            "idempotency_key": idempotency_key,
+            "approval_required": False,
+            "escalated": False,
+            "latency_ms": 110
+        }
+
+    # WORKFLOW 2: Sales Lead Qualification & Booking (wf_sales / proj_sales_01)
+    if is_sales or any(k in text_lower for k in ["sales", "demo", "lead", "budget", "seats", "pricing"]):
+        lead = LEADS_DB.get(customer_id, {})
+        sales_context = (
+            f"Customer Name: {customer_name}.\n"
+            f"Lead Company: {lead.get('company', 'Tech Solutions')}.\n"
+            f"Seats requested: {lead.get('seats', 50)} seats.\n"
+            f"Monthly Budget: {lead.get('budget', '1.5 Lakhs/mo')}.\n"
+            f"Demo Schedule: {lead.get('demo_time', 'Oct 3, 2026 at 3:00 PM IST')}.\n"
+            f"Assigned Representative: {lead.get('rep', 'Senior Account Exec Rahul')}."
+        )
+
+        llm_response = query_real_nvidia_llm(
+            user_input=text_input,
+            system_prompt="You are a B2B SaaS sales lead qualification executive scheduling product demos.",
+            context=sales_context,
+            lang=lang
+        )
+
+        if not llm_response:
+            llm_response = f"Your product demo for {lead.get('company', 'Tech Solutions')} is confirmed for {lead.get('demo_time')} with representative {lead.get('rep')}."
+
+        return {
+            "turn_index": 2,
+            "speaker": "Demo Scheduler",
+            "worker_id": "scheduler",
+            "text": format_voice_response(llm_response, lang=lang),
+            "audio_filler": get_audio_filler("cal", lang=lang),
+            "tool_used": "cal",
+            "action_taken": "get_lead_demo_schedule",
+            "idempotency_key": idempotency_key,
+            "approval_required": False,
+            "escalated": False,
+            "latency_ms": 120
+        }
+
+    # WORKFLOW 1: Customer Support & Refunds (wf_support / proj_support_01) - DEFAULT WORKFLOW
+    if req.confirm_action:
+        success, res = execute_tool_gateway(
+            tenant_id="org_sme_001",
+            customer_id=customer_id,
+            tool_name="pay",
+            args={"order_id": "ORD-8821", "action": "create_refund"},
+            confirmed_by_user=True,
+            auto_refund_limit=2000
+        )
+        raw_resp = f"Refund of ₹{res.get('amount', 1499)} initiated for {res.get('item', 'Kanjivaram Saree')}. Reference {res.get('refund_ref', 'RF-2291')}. Amount will reflect in 3 to 5 business days."
+        return {
+            "turn_index": 4,
+            "speaker": "Refund Worker",
+            "worker_id": "refund",
+            "text": format_voice_response(raw_resp, lang=lang),
+            "audio_filler": get_audio_filler("pay", lang=lang),
+            "tool_used": "pay",
+            "action_taken": "create_refund",
+            "idempotency_key": idempotency_key,
+            "approval_required": False,
+            "escalated": False,
+            "latency_ms": 130
+        }
+
+    if req.image_url:
+        raw_resp = "Damage verified from uploaded photo. Refund of 14 hundred and 99 rupees requires your confirmation. Shall I proceed?"
+        return {
+            "turn_index": 3,
+            "speaker": "Refund Worker",
+            "worker_id": "refund",
+            "text": format_voice_response(raw_resp, lang=lang),
+            "audio_filler": get_audio_filler("pay", lang=lang),
+            "tool_used": "pay",
+            "action_taken": "verify_damage_image",
+            "approval_required": True,
+            "idempotency_key": idempotency_key,
+            "escalated": False,
+            "latency_ms": 250
+        }
+
+    # Query Database Records for Customer
+    user_orders = [o for o in ORDERS_DB.values() if o["customer_id"] == customer_id]
+    orders_context = f"Customer Name: {customer_name}. Account ID: {customer_id}.\nActive Orders:\n"
+    for o in user_orders:
+        orders_context += f"- Order {o['id']}: Item {o['item_name']}, Price ₹{o['price']}, Status {o['status']}, Delivery Info: {o.get('delivery_date') or o.get('expected_delivery')}.\n"
+
+    llm_response = query_real_nvidia_llm(
+        user_input=text_input,
+        system_prompt="You are an order verification & support assistant for an e-commerce platform.",
+        context=orders_context,
+        lang=lang
+    )
+
+    if not llm_response:
+        # Clean grounded response from DB context
+        if "8821" in text_lower:
+            llm_response = f"Order ORD-8821 for Kanjivaram Silk Saree was delivered on Oct 1 via Express Courier."
+        elif "8822" in text_lower:
+            llm_response = f"Order ORD-8822 for Wireless Noise-Canceling Earbuds is out for delivery today by 4:00 PM via BlueDart."
+        elif "8823" in text_lower:
+            llm_response = f"Order ORD-8823 for Cotton Formal Shirt is currently processing and expected on Oct 4."
+        else:
+            llm_response = f"You have 3 active orders: your Kanjivaram Saree was delivered, your Earbuds are out for delivery today, and your Formal Shirt is processing."
+
+    return {
+        "turn_index": 2,
+        "speaker": "Order Verification Worker",
+        "worker_id": "order_check",
+        "text": format_voice_response(llm_response, lang=lang),
+        "audio_filler": get_audio_filler("orders", lang=lang),
+        "tool_used": "orders",
+        "action_taken": "get_orders_by_customer",
+        "idempotency_key": idempotency_key,
+        "approval_required": False,
+        "escalated": False,
+        "latency_ms": 115
+    }
 
     # General Knowledge / RAG Query Node
     rag_context = (

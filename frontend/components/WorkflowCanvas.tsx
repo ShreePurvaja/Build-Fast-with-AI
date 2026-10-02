@@ -3033,6 +3033,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 onClick={() => {
                   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                   setShowVoiceCallModal(false);
+                  setCallTurns([]);
+                  setLiveSpeechTranscript('');
+                  setActiveCallNodeStep('');
                 }}
                 className="text-[#9B9488] hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
@@ -3204,6 +3207,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   onClick={() => {
                     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                     setShowVoiceCallModal(false);
+                    setCallTurns([]);
+                    setLiveSpeechTranscript('');
+                    setActiveCallNodeStep('');
                   }}
                   className="text-red-600 hover:underline font-bold"
                 >
