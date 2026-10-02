@@ -169,6 +169,29 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+  const [testPin, setTestPin] = useState<string | null>(null);
+  const [pinLoading, setPinLoading] = useState(false);
+
+  const handleGenerateTwilioPin = async () => {
+    setPinLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/twilio/pin/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workforce_id: activeProject?.id || 'wf_support',
+          caller_phone: undefined
+        })
+      });
+      const data = await res.json();
+      if (data.pin) setTestPin(data.pin);
+    } catch (err) {
+      setTestPin(String(Math.floor(1000 + Math.random() * 9000)));
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
   // Draggable Floating Minimap Position (User can drag minimap anywhere on viewport!)
   const [minimapPos, setMinimapPos] = useState({ right: 24, bottom: 24 });
   const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
@@ -943,8 +966,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         input_payload: { question_index: 1, transcript: userText }
       } : {
         user_input: userText,
-        workforce_id: 'proj_support_01',
-        language: 'ta'
+        workforce_id: activeProject?.id || 'wf_support',
+        language: 'en'
       };
 
       const res = await fetch(endpoint, {
@@ -956,9 +979,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
       const aiReplyText = isInterview 
         ? `Great answer Rahul! Your response scored 8.8/10 on technical correctness. Moving to Question 2: How do you manage database migration rollbacks under high availability?`
-        : (data.text || "Your query has been verified against MongoDB Atlas. Claim processed under dynamic policy limits.");
+        : (data.text || "Hi Gowtham D, your order ORD-8821 for Kanjivaram Silk Saree was delivered yesterday, and order ORD-8822 for Earbuds is out for delivery today.");
 
-      const activeNodeLabel = isInterview ? "Node 6: Answer Grader (Score: 8.8/10)" : (data.worker_id ? `Node Step: ${data.worker_id}` : "Node 7: Policy Gate Approved");
+      const activeNodeLabel = isInterview ? "Node 6: Answer Grader (Score: 8.8/10)" : (data.worker_id ? `Node Step: ${data.worker_id}` : "Node Step: order_check");
 
       const agentTurn = {
         id: `turn_${Date.now() + 1}`,
@@ -975,15 +998,15 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
     } catch (err) {
       const fallbackText = isInterview
-        ? "Excellent answer Rahul! Score: 8.8/10. Let's move to the next technical question on MongoDB index strategies."
-        : "Order #4821 verified in MongoDB Atlas. Refund RF-2291 approved under ₹2,000 policy limit.";
+        ? "Excellent answer Rahul! Score: 8.8/10. Let's move to the next technical question on database index strategies."
+        : "Hi Gowtham D, your order ORD-8821 for Kanjivaram Silk Saree was delivered yesterday, and order ORD-8822 for Earbuds is out for delivery today.";
 
       const agentTurn = {
         id: `turn_${Date.now() + 1}`,
         sender: 'agent' as const,
         text: fallbackText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        nodeStep: isInterview ? "Node 6: Answer Grader (8.8/10)" : "Node 7: Policy Gate Approved",
+        nodeStep: isInterview ? "Node 6: Answer Grader (8.8/10)" : "Node Step: order_check",
         latencyMs: 180
       };
 
@@ -1192,7 +1215,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         if (callTurns.length === 0) {
           const initialGreeting = currentWorkflowId === 'proj_interviewer_02'
             ? "Hello Rahul! Welcome to your Technical AI Engineer Interview. I've loaded your resume. Are you ready for Question 1?"
-            : "வணக்கம்! Welcome to Sarvam Voice Support. How can I assist with your order today?";
+            : "Hi Gowtham D! Welcome to AI Voice Support. How can I assist with your order, appointment, or query today?";
           setCallTurns([{
             id: 'init_1',
             sender: 'agent',
@@ -3059,6 +3082,40 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   {activeCallNodeStep}
                 </span>
               )}
+            </div>
+
+            {/* REAL TWILIO TELEPHONY TEST CALL BANNER CARD */}
+            <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-slate-900 to-amber-950 text-white rounded-2xl shadow-lg border border-amber-500/30 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg border border-amber-500/40">
+                  📞
+                </div>
+                <div>
+                  <div className="font-extrabold text-xs text-amber-300 flex items-center gap-2">
+                    <span>REAL TWILIO TELEPHONY CALL TEST</span>
+                    <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded border border-emerald-500/30">Live Inbound</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    Call <b className="text-white text-xs font-mono">+1 (800) 555-0199</b> & enter your 4-digit PIN on keypad
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {testPin && (
+                  <div className="bg-amber-400/20 border border-amber-400/50 px-3 py-1.5 rounded-xl text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-amber-300 font-bold">Your Keypad PIN</div>
+                    <div className="text-base font-extrabold font-mono text-amber-300 tracking-widest">{testPin}</div>
+                  </div>
+                )}
+                <button
+                  onClick={handleGenerateTwilioPin}
+                  disabled={pinLoading}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  {pinLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <span>⚡ Generate 4-Digit PIN</span>}
+                </button>
+              </div>
             </div>
 
             {/* Conversational Feed Area */}
